@@ -1,5 +1,5 @@
 schema_version = 1
-builtins = 74
+builtins = 77
 
 # Test-only repository coverage; runtime extensions are intentionally exempt.
 
@@ -327,6 +327,30 @@ wheel_smoke_case = "_image_sequences"
 id = "webm"
 benchmark_case = "webm"
 source_suite = "tests/codecs/test_webm.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "ivf"
+benchmark_case = "ivf"
+source_suite = "tests/codecs/test_ivf.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "mjpeg"
+benchmark_case = "mjpeg"
+source_suite = "tests/codecs/test_mjpeg.py"
+documentation_row = "docs/format_coverage.md"
+inspection_source = "src/sceneio/io/_inspectors/sequences.py"
+wheel_smoke_case = "_image_sequences"
+
+[[codec]]
+id = "mp4"
+benchmark_case = "mp4"
+source_suite = "tests/codecs/test_mp4.py"
 documentation_row = "docs/format_coverage.md"
 inspection_source = "src/sceneio/io/_inspectors/sequences.py"
 wheel_smoke_case = "_image_sequences"

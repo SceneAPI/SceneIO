@@ -22,6 +22,13 @@ except Exception:  # pragma: no cover
 
 pytestmark = pytest.mark.skipif(_core is None, reason="sceneio._core not built")
 PIL = pytest.importorskip("PIL.Image")
+_XMP_IDENTIFIER = b"http://ns.adobe.com/xap/1.0/\0"
+
+
+def _inject_xmp(jpeg: bytes, xml: str) -> bytes:
+    payload = _XMP_IDENTIFIER + xml.encode("utf-8")
+    length = len(payload) + 2
+    return jpeg[:2] + b"\xff\xe1" + length.to_bytes(2, "big") + payload + jpeg[2:]
 
 
 def psnr(a, b):
@@ -199,6 +206,64 @@ def test_write_guards():
     for q in (0, 101):
         with pytest.raises(ValueError, match="quality"):
             _core.write_jpeg(_core.image(rgb, color_space="srgb"), q)
+
+
+def test_gpano_equirectangular_full_and_cropped_roundtrip():
+    full = _core.image(
+        gradient_rgb(4, 8),
+        color_space="srgb",
+        projection="equirectangular",
+    )
+    encoded = bytes(_core.write_jpeg(full, 90))
+    assert _XMP_IDENTIFIER in encoded
+    assert b'GPano:ProjectionType="equirectangular"' in encoded
+    decoded = _core.read_jpeg(encoded)
+    assert decoded.projection == "equirectangular"
+    assert decoded.projection_canvas_width == 8
+    assert decoded.projection_canvas_height == 4
+    assert decoded.projection_crop_left == 0
+    assert decoded.projection_crop_top == 0
+    assert decoded.is_full_sphere
+
+    crop = _core.image(
+        gradient_rgb(2, 3),
+        color_space="srgb",
+        projection="equirectangular",
+        projection_canvas_width=8,
+        projection_canvas_height=4,
+        projection_crop_left=3,
+        projection_crop_top=1,
+    )
+    decoded_crop = _core.read_jpeg(_core.write_jpeg(crop, 90))
+    assert decoded_crop.projection_canvas_width == 8
+    assert decoded_crop.projection_canvas_height == 4
+    assert decoded_crop.projection_crop_left == 3
+    assert decoded_crop.projection_crop_top == 1
+    assert not decoded_crop.is_full_sphere
+
+
+def test_gpano_element_form_and_inconsistent_crop():
+    base = bytes(
+        _core.write_jpeg(
+            _core.image(gradient_rgb(4, 8), color_space="srgb"),
+            90,
+        )
+    )
+    xml = """<x:xmpmeta xmlns:x="adobe:ns:meta/">
+    <GPano:ProjectionType>equirectangular</GPano:ProjectionType>
+    <GPano:FullPanoWidthPixels>8</GPano:FullPanoWidthPixels>
+    <GPano:FullPanoHeightPixels>4</GPano:FullPanoHeightPixels>
+    </x:xmpmeta>"""
+    decoded = _core.read_jpeg(_inject_xmp(base, xml))
+    assert decoded.projection == "equirectangular"
+    assert decoded.is_full_sphere
+
+    malformed = xml.replace(
+        "</x:xmpmeta>",
+        "<GPano:CroppedAreaImageWidthPixels>7</GPano:CroppedAreaImageWidthPixels></x:xmpmeta>",
+    )
+    with pytest.raises(ValueError, match="cropped dimensions disagree"):
+        _core.read_jpeg(_inject_xmp(base, malformed))
 
 
 def test_malformed_raises():

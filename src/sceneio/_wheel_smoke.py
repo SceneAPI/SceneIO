@@ -1102,6 +1102,25 @@ def _raster_images(root: Path) -> None:
             )
             assert selected.pixels.shape == (2, 3, 3)
 
+    pano_pixels = np.arange(96, dtype=np.uint8).reshape(4, 8, 3)
+    panorama = sceneio.image(
+        pano_pixels,
+        color_space="srgb",
+        projection="equirectangular",
+    )
+    pano_path = root / "panorama.jpg"
+    sceneio.write(panorama, pano_path, format="jpeg")
+    decoded_pano = sceneio.read(pano_path, format="jpeg")
+    assert decoded_pano.projection == "equirectangular"
+    assert decoded_pano.is_full_sphere
+    assert sceneio.inspect(pano_path).metadata["is_full_sphere"] is True
+    assert sceneio.equirectangular_camera(decoded_pano).model_id == 17
+    center_ray = sceneio.equirectangular_pixels_to_rays(
+        decoded_pano,
+        [[4.0, 2.0]],
+    )
+    assert np.allclose(center_ray, [[0.0, 0.0, 1.0]], atol=1e-15)
+
     linear_pixels = np.arange(36, dtype=np.float32).reshape(3, 4, 3) / 35
     linear_image = _core.image(linear_pixels, color_space="linear")
     for format_id, suffix in (("hdr", ".hdr"), ("exr", ".exr")):
@@ -1879,6 +1898,55 @@ def Xform "Animated"
     assert "evaluated composition" in error
 
 
+def _smoke_av1_mp4(sequence: _core.ImageSequence) -> bytes:
+    ivf = bytes(_core.write_ivf(sequence, codec="av1", threads=1))
+    packet_count = int.from_bytes(ivf[24:28], "little")
+    packets = []
+    position = 32
+    for _ in range(packet_count):
+        size = int.from_bytes(ivf[position : position + 4], "little")
+        position += 12
+        packets.append(ivf[position : position + size])
+        position += size
+
+    def box(kind: bytes, payload: bytes) -> bytes:
+        return struct.pack(">I4s", len(payload) + 8, kind) + payload
+
+    def full_box(kind: bytes, payload: bytes) -> bytes:
+        return box(kind, b"\0\0\0\0" + payload)
+
+    ftyp = box(b"ftyp", b"isom\x00\x00\x02\x00isomav01")
+    mdat = box(b"mdat", b"".join(packets))
+    visual_entry = bytearray(78)
+    visual_entry[6:8] = struct.pack(">H", 1)
+    visual_entry[24:28] = struct.pack(">HH", sequence.width, sequence.height)
+    av01 = box(
+        b"av01",
+        bytes(visual_entry)
+        + box(b"av1C", b"\x81\x00\x0c\x00")
+        + box(b"colr", b"nclx" + struct.pack(">HHHB", 1, 1, 6, 0)),
+    )
+    stsd = full_box(b"stsd", struct.pack(">I", 1) + av01)
+    stsz = full_box(
+        b"stsz",
+        struct.pack(">II", 0, packet_count)
+        + b"".join(struct.pack(">I", len(packet)) for packet in packets),
+    )
+    stsc = full_box(b"stsc", struct.pack(">IIII", 1, 1, packet_count, 1))
+    stco = full_box(b"stco", struct.pack(">II", 1, len(ftyp) + 8))
+    stts = full_box(b"stts", struct.pack(">III", 1, packet_count, 1))
+    stbl = box(b"stbl", stsd + stsz + stsc + stco + stts)
+    mdhd = full_box(b"mdhd", struct.pack(">IIII", 0, 0, 25, packet_count))
+    mdia = box(
+        b"mdia",
+        mdhd + full_box(b"hdlr", b"\0\0\0\0vide") + box(b"minf", stbl),
+    )
+    mvhd = full_box(
+        b"mvhd", struct.pack(">IIII", 0, 0, 1000, packet_count * 40)
+    )
+    return ftyp + mdat + box(b"moov", mvhd + box(b"trak", mdia))
+
+
 def _image_sequences(root: Path) -> None:
     assert sceneio.ImageSequence is _core.ImageSequence
     frames = root / "frames"
@@ -1887,7 +1955,7 @@ def _image_sequences(root: Path) -> None:
     second = b"P5\n3 2\n255\n" + bytes(range(6, 12))
     (frames / "frame10.pgm").write_bytes(second)
     (frames / "frame2.pgm").write_bytes(first)
-    lazy = sceneio.read(frames, format="image_sequence")
+    lazy = sceneio.read_image_folder(frames)
     assert lazy.frame_names == ["frame2.pgm", "frame10.pgm"]
     assert lazy.y.shape == (0, 0, 0)
     copied = root / "frames-copy"
@@ -1896,6 +1964,33 @@ def _image_sequences(root: Path) -> None:
     assert (copied / "frame2.pgm").read_bytes() == first
     assert sceneio.inspect(copied).count == 2
     assert sceneio.read_partial(copied, frames=(1, 2)).num_frames == 1
+    manifest = json.loads(
+        (copied / "sceneio_sequence.json").read_text(encoding="utf-8")
+    )
+    assert manifest["sceneio_image_sequence"] == 2
+
+    pano_sequence = _core.image_sequence_packed(
+        np.zeros((2, 4, 8, 3), dtype=np.uint8),
+        np.array([0, 40_000_000], dtype=np.int64),
+        np.array([40_000_000, 40_000_000], dtype=np.int64),
+        "srgb",
+        "none",
+        projection="equirectangular",
+    )
+    pano_folder = root / "pano-frames"
+    sceneio.write_image_folder(pano_sequence, pano_folder, frame_format="png")
+    decoded_pano_folder = sceneio.read(pano_folder)
+    assert decoded_pano_folder.is_full_sphere
+    assert sceneio.equirectangular_camera(decoded_pano_folder).model_id == 17
+    jpeg_pano_folder = root / "pano-jpeg-frames"
+    sceneio.write_image_folder(
+        pano_sequence,
+        jpeg_pano_folder,
+        frame_format="jpeg",
+    )
+    assert sceneio.read(
+        jpeg_pano_folder / "frame000000.jpg"
+    ).projection == "equirectangular"
 
     empty = np.empty(0, np.int64)
     y = np.arange(2 * 3 * 5, dtype=np.uint8).reshape(2, 3, 5)
@@ -1944,7 +2039,7 @@ def _image_sequences(root: Path) -> None:
     assert decoded_webm.durations_ns.tolist() == [40_000_000, 40_000_000]
     assert sceneio.inspect(webm_path).shape == (2, 3, 5, 3)
     assert sceneio.read_partial(webm_path, frames=(1, 2)).num_frames == 1
-    for webm_profile in ("vp8-temporal", "vp9-temporal"):
+    for webm_profile in ("vp8-temporal", "vp9-temporal", "av1-temporal"):
         temporal_path = root / f"sequence-{webm_profile}.webm"
         sceneio.write(
             webm_sequence,
@@ -1961,6 +2056,57 @@ def _image_sequences(root: Path) -> None:
         assert sceneio.read_partial(
             temporal_path, frames=(1, 2)
         ).num_frames == 1
+
+    ivf_sequence = _core.image_sequence_yuv(
+        y,
+        u,
+        v,
+        np.array([0, 40_000_000], dtype=np.int64),
+        np.array([40_000_000, 40_000_000], dtype=np.int64),
+        "420",
+        "unspecified",
+        "limited",
+        "bt601",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
+    for ivf_profile in ("vp8", "vp9", "av1"):
+        ivf_path = root / f"sequence-{ivf_profile}.ivf"
+        sceneio.write(
+            ivf_sequence,
+            ivf_path,
+            format="ivf",
+            profile=ivf_profile,
+        )
+        assert sceneio.detect(ivf_path) == "ivf"
+        assert sceneio.inspect(ivf_path).metadata["codec"] == ivf_profile
+        decoded_ivf = sceneio.read(ivf_path)
+        assert decoded_ivf.y.shape == y.shape
+        assert sceneio.read_partial(ivf_path, frames=(1, 2)).num_frames == 1
+
+    mjpeg_sequence = _core.image_sequence_packed(
+        webm_pixels,
+        empty,
+        empty,
+        "srgb",
+        "none",
+    )
+    mjpeg_path = root / "sequence.mjpg"
+    sceneio.write(mjpeg_sequence, mjpeg_path, format="mjpeg")
+    assert sceneio.detect(mjpeg_path) == "mjpeg"
+    assert sceneio.inspect(mjpeg_path).shape == (2, 3, 5, 3)
+    assert sceneio.read(mjpeg_path).pixels.shape == webm_pixels.shape
+    assert sceneio.read_partial(mjpeg_path, frames=(1, 2)).num_frames == 1
+
+    mp4_path = root / "sequence.mp4"
+    mp4_path.write_bytes(_smoke_av1_mp4(ivf_sequence))
+    assert sceneio.detect(mp4_path) == "mp4"
+    assert sceneio.inspect(mp4_path).metadata["codec"] == "av1"
+    assert sceneio.read(mp4_path).y.shape == y.shape
+    assert sceneio.read_partial(mp4_path, frames=(1, 2)).num_frames == 1
 
     theora_sequence = _core.image_sequence_yuv(
         y,
@@ -2633,6 +2779,9 @@ _SMOKE_RUNNERS: Mapping[str, Callable[[Path], None]] = MappingProxyType(
         "avif": _avif_formats,
         "y4m": _image_sequences,
         "webm": _image_sequences,
+        "ivf": _image_sequences,
+        "mjpeg": _image_sequences,
+        "mp4": _image_sequences,
         "theora": _image_sequences,
         "animated_webp": _image_sequences,
         "apng": _image_sequences,

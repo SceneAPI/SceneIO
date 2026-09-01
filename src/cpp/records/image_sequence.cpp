@@ -197,10 +197,16 @@ ImageSequence make_path_sequence(
     const std::string &frame_dtype,
     const std::string &color_space,
     const std::string &alpha_mode,
+    std::optional<uint32_t> maxval,
     std::optional<i64_array> exposure_durations_ns,
     std::optional<i64_array> readout_step_durations_ns,
     std::optional<std::vector<std::string>> readout_directions,
-    const std::string &timestamp_reference) {
+    const std::string &timestamp_reference,
+    const std::string &projection,
+    std::optional<size_t> projection_canvas_width,
+    std::optional<size_t> projection_canvas_height,
+    std::optional<size_t> projection_crop_left,
+    std::optional<size_t> projection_crop_top) {
     if (paths.size() != names.size())
         throw std::invalid_argument(
             "image sequence: paths and names must have equal length");
@@ -212,12 +218,19 @@ ImageSequence make_path_sequence(
     sequence.frame_dtype = frame_dtype;
     sequence.color_space = color_space;
     sequence.alpha_mode = alpha_mode;
+    sequence.maxval = maxval.value_or(
+        frame_dtype == "uint8" ? 255u :
+        frame_dtype == "uint16" ? 65535u : 0u);
     assign_image_sequence_paths(sequence, paths);
     assign_image_sequence_names(sequence, names);
     assign_timing(sequence, timestamps_ns, durations_ns);
     assign_acquisition_timing(
         sequence, exposure_durations_ns, readout_step_durations_ns,
         std::move(readout_directions), timestamp_reference);
+    assign_image_sequence_projection(
+        sequence, projection, projection_canvas_width,
+        projection_canvas_height, projection_crop_left,
+        projection_crop_top);
     validate_image_sequence(sequence);
     return sequence;
 }
@@ -240,7 +253,12 @@ ImageSequence make_yuv_sequence(
     std::optional<i64_array> exposure_durations_ns,
     std::optional<i64_array> readout_step_durations_ns,
     std::optional<std::vector<std::string>> readout_directions,
-    const std::string &timestamp_reference) {
+    const std::string &timestamp_reference,
+    const std::string &projection,
+    std::optional<size_t> projection_canvas_width,
+    std::optional<size_t> projection_canvas_height,
+    std::optional<size_t> projection_crop_left,
+    std::optional<size_t> projection_crop_top) {
     if (y.ndim() != 3)
         throw std::invalid_argument(
             "image sequence: Y plane must be (N,H,W) uint8");
@@ -311,6 +329,10 @@ ImageSequence make_yuv_sequence(
     assign_acquisition_timing(
         sequence, exposure_durations_ns, readout_step_durations_ns,
         std::move(readout_directions), timestamp_reference);
+    assign_image_sequence_projection(
+        sequence, projection, projection_canvas_width,
+        projection_canvas_height, projection_crop_left,
+        projection_crop_top);
     validate_image_sequence(sequence);
     return sequence;
 }
@@ -327,7 +349,12 @@ ImageSequence make_packed_sequence(
     std::optional<i64_array> exposure_durations_ns,
     std::optional<i64_array> readout_step_durations_ns,
     std::optional<std::vector<std::string>> readout_directions,
-    const std::string &timestamp_reference) {
+    const std::string &timestamp_reference,
+    const std::string &projection,
+    std::optional<size_t> projection_canvas_width,
+    std::optional<size_t> projection_canvas_height,
+    std::optional<size_t> projection_crop_left,
+    std::optional<size_t> projection_crop_top) {
     if (pixels.ndim() != 3 && pixels.ndim() != 4)
         throw std::invalid_argument(
             "image sequence: packed pixels must be (N,H,W) or (N,H,W,C)");
@@ -386,6 +413,10 @@ ImageSequence make_packed_sequence(
     assign_acquisition_timing(
         sequence, exposure_durations_ns, readout_step_durations_ns,
         std::move(readout_directions), timestamp_reference);
+    assign_image_sequence_projection(
+        sequence, projection, projection_canvas_width,
+        projection_canvas_height, projection_crop_left,
+        projection_crop_top);
     validate_image_sequence(sequence);
     return sequence;
 }
@@ -422,6 +453,26 @@ void assign_image_sequence_names(
         "image sequence name");
 }
 
+void assign_image_sequence_projection(
+    ImageSequence &sequence,
+    const std::string &projection,
+    std::optional<size_t> canvas_width,
+    std::optional<size_t> canvas_height,
+    std::optional<size_t> crop_left,
+    std::optional<size_t> crop_top,
+    const char *context) {
+    assign_image_projection_metadata(
+        sequence.projection_metadata,
+        sequence.width,
+        sequence.height,
+        projection,
+        canvas_width,
+        canvas_height,
+        crop_left,
+        crop_top,
+        context);
+}
+
 void validate_image_sequence(
     const ImageSequence &sequence, const char *context) {
     const std::string prefix = std::string(context) + ": ";
@@ -437,6 +488,13 @@ void validate_image_sequence(
         sequence.frame_dtype != "float32")
         throw std::invalid_argument(
             prefix + "frame_dtype must be uint8|uint16|float32");
+    if ((sequence.frame_dtype == "uint8" &&
+         (sequence.maxval < 1 || sequence.maxval > 255)) ||
+        (sequence.frame_dtype == "uint16" &&
+         (sequence.maxval < 1 || sequence.maxval > 65535)) ||
+        (sequence.frame_dtype == "float32" && sequence.maxval != 0))
+        throw std::invalid_argument(
+            prefix + "maxval disagrees with frame_dtype");
     if (sequence.color_space != "srgb" &&
         sequence.color_space != "linear" &&
         sequence.color_space != "gray" &&
@@ -453,6 +511,11 @@ void validate_image_sequence(
         (sequence.channels != 4))
         throw std::invalid_argument(
             prefix + "alpha_mode and channel count disagree");
+    validate_image_projection_metadata(
+        sequence.projection_metadata,
+        sequence.width,
+        sequence.height,
+        context);
     const bool timing_empty =
         sequence.timestamps_ns.empty() &&
         sequence.durations_ns.empty();
@@ -774,6 +837,29 @@ void require_no_image_sequence_acquisition(
             ": acquisition timing metadata is not representable");
 }
 
+void require_no_image_sequence_projection(
+    const ImageSequence &sequence, const char *context) {
+    if (sequence.projection_metadata.kind != "unknown")
+        throw std::invalid_argument(
+            std::string(context) +
+            ": image projection metadata is not representable");
+}
+
+ImageSequence image_sequence_with_projection(
+    const ImageSequence &source,
+    const std::string &projection,
+    std::optional<size_t> canvas_width,
+    std::optional<size_t> canvas_height,
+    std::optional<size_t> crop_left,
+    std::optional<size_t> crop_top) {
+    ImageSequence result = source;
+    assign_image_sequence_projection(
+        result, projection, canvas_width, canvas_height,
+        crop_left, crop_top);
+    validate_image_sequence(result);
+    return result;
+}
+
 void register_image_sequence(nb::module_ &module) {
     const auto internal = nb::rv_policy::reference_internal;
     nb::class_<ImageSequence>(module, "ImageSequence")
@@ -797,6 +883,34 @@ void register_image_sequence(nb::module_ &module) {
         .def_ro("frame_rate_denominator", &ImageSequence::frame_rate_denominator)
         .def_ro("pixel_aspect_numerator", &ImageSequence::pixel_aspect_numerator)
         .def_ro("pixel_aspect_denominator", &ImageSequence::pixel_aspect_denominator)
+        .def_prop_ro(
+            "projection",
+            [](const ImageSequence &v) {
+                return v.projection_metadata.kind;
+            })
+        .def_prop_ro(
+            "projection_canvas_width",
+            [](const ImageSequence &v) {
+                return v.projection_metadata.canvas_width;
+            })
+        .def_prop_ro(
+            "projection_canvas_height",
+            [](const ImageSequence &v) {
+                return v.projection_metadata.canvas_height;
+            })
+        .def_prop_ro(
+            "projection_crop_left",
+            [](const ImageSequence &v) {
+                return v.projection_metadata.crop_left;
+            })
+        .def_prop_ro(
+            "projection_crop_top",
+            [](const ImageSequence &v) {
+                return v.projection_metadata.crop_top;
+            })
+        .def_prop_ro(
+            "is_full_sphere",
+            [](const ImageSequence &v) { return v.is_full_sphere(); })
         .def_prop_ro("has_timing", [](const ImageSequence &v) {
             return v.has_timing();
         })
@@ -952,10 +1066,16 @@ void register_image_sequence(nb::module_ &module) {
         "color_space"_a = "unknown",
         "alpha_mode"_a = "none",
         nb::kw_only(),
+        "maxval"_a = nb::none(),
         "exposure_durations_ns"_a = nb::none(),
         "readout_step_durations_ns"_a = nb::none(),
         "readout_directions"_a = nb::none(),
         "timestamp_reference"_a = "unknown",
+        "projection"_a = "unknown",
+        "projection_canvas_width"_a = nb::none(),
+        "projection_canvas_height"_a = nb::none(),
+        "projection_crop_left"_a = nb::none(),
+        "projection_crop_top"_a = nb::none(),
         "Build a lazy ImageSequence from owned UTF-8 frame references and "
         "optional exact int64 nanosecond timing.");
     module.def(
@@ -971,6 +1091,11 @@ void register_image_sequence(nb::module_ &module) {
         "readout_step_durations_ns"_a = nb::none(),
         "readout_directions"_a = nb::none(),
         "timestamp_reference"_a = "unknown",
+        "projection"_a = "unknown",
+        "projection_canvas_width"_a = nb::none(),
+        "projection_canvas_height"_a = nb::none(),
+        "projection_crop_left"_a = nb::none(),
+        "projection_crop_top"_a = nb::none(),
         "Build an owned packed gray/RGB/RGBA ImageSequence from "
         "(N,H,W)/(N,H,W,C) uint8/uint16/float32 samples, with exact "
         "timing and optional APNG/WebP loop/background metadata.");
@@ -992,6 +1117,22 @@ void register_image_sequence(nb::module_ &module) {
         "readout_step_durations_ns"_a = nb::none(),
         "readout_directions"_a = nb::none(),
         "timestamp_reference"_a = "unknown",
+        "projection"_a = "unknown",
+        "projection_canvas_width"_a = nb::none(),
+        "projection_canvas_height"_a = nb::none(),
+        "projection_crop_left"_a = nb::none(),
+        "projection_crop_top"_a = nb::none(),
         "Build an owned uint8 planar-YUV ImageSequence without converting "
         "to RGB.");
+    module.def(
+        "image_sequence_with_projection",
+        &image_sequence_with_projection,
+        "sequence"_a,
+        "projection"_a,
+        "projection_canvas_width"_a = nb::none(),
+        "projection_canvas_height"_a = nb::none(),
+        "projection_crop_left"_a = nb::none(),
+        "projection_crop_top"_a = nb::none(),
+        "Return an owned ImageSequence copy with one explicit frame "
+        "projection contract.");
 }

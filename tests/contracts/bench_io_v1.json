@@ -497,7 +497,7 @@
       "family_functions": {
         "build_sequence_specs": {
           "source": "bench/io_bench/families/sequences.py",
-          "ast_sha256": "c717f406d21d2a6f032d42c1b773fece477bcda7d74070a457b3e8d9ebf931da"
+          "ast_sha256": "891424a5dc169761d86a7c2c85808a1f60f1b1e11dbc55bafed366eccb3b9697"
         }
       },
       "runner_family_exports": [
@@ -564,6 +564,18 @@
       "optional_oracle_bindings": [],
       "optional_oracle_source": "bench/io_bench/oracles/sequences.py",
       "no_oracle_exemptions": {
+        "ivf": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by tests/codecs/test_ivf.py"
+        },
+        "mjpeg": {
+          "unverified_property": "independent benchmark encode/decode throughput",
+          "verification": "format parity remains covered by tests/codecs/test_mjpeg.py"
+        },
+        "mp4": {
+          "unverified_property": "independent benchmark decode/inspect throughput",
+          "verification": "format parity remains covered by tests/codecs/test_mp4.py"
+        },
         "theora": {
           "unverified_property": "direct pinned libtheora with independent Ogg framing oracle",
           "verification": "container framing and payload parity remain covered by tests/codecs/test_theora.py"
@@ -653,10 +665,10 @@
   },
   "r3_2_qualification": {
     "source": "bench/io_bench/qualification.py",
-    "builtin_count": 74,
+    "builtin_count": 77,
     "timed_count": 53,
-    "reviewed_exemption_count": 21,
-    "ledger_sha256": "c0f01d1f34c4a91b322ff6509e7fcc95b3f9b515aabce0f9f7819f99d60b7eb8"
+    "reviewed_exemption_count": 24,
+    "ledger_sha256": "fdd60489f7c25658d00e8250a76f3aefbf253fb4abb7114e2f92e01faabc29b7"
   },
   "r3_2_runner_extraction": {
     "parent_commit": "cd322685d3de86931ec4264261924fb3c309b6c4",
@@ -677,7 +689,7 @@
       "_evict_file_cache": "ce88899f9525aecc749764372ed3d85fde9f9af62ad95feb4e90cee38f77cc83",
       "_stored_size": "f76c384c22cdbd196f96fc51960866d546db6584300845583135805d9bd54f32",
       "_specs": "153fd71dbbd54191b09297c807042017390edb1588069c3b2ec78b7412f0ea82",
-      "_directory_specs": "b507b6a9b59b6a5dc22528a7a15b3926d800b648b9e5ac6bb3be4316cd8bd46c",
+      "_directory_specs": "071e0b0eac76750122ef187b66d98073cfa18539f57ebb673242345809f54f0e",
       "_directory_size": "27992c88e0aec0a0cb6433a1e1243b929af446c71574d863905f77e7c18372e8",
       "_assert_ncore_dataset_equal": "011d5c839e98a2d726f03c21284d641b6cec0fb03941aa6bdde1db681e83761b",
       "_assert_euroc_dataset_equal": "e06e437270fe5ecd1b498f6b8a5976b595b9a39561bd547cce95ce12c7c8a572",
@@ -689,7 +701,7 @@
       "_benchmark_colmap_db": "d6d88ec39d620393a191a3d542564b83bd3aad96668c5ef6c58ed3cbcac2bda9",
       "_benchmark_path_spec": "3bac92c60c0e5e8a35b1d698ab1005988398c7aaa6e8393634e65c7e45efc512",
       "_benchmark_gltf": "3e6901a8b273c6eebb8c3601a9b9586504637db988d57afef0975f84e904867d",
-      "_run_benchmark": "1cfe8dd61e760f3aa32c8fb1c8d69921f0b3d2fee81fbfe90a1db2b54a005382"
+      "_run_benchmark": "193b128693693efd766de057f1039a8bfd7b0f8b8607ef9ee475c2f1c51e38d2"
     }
   },
   "r3_1a_equivalence": {
@@ -774,6 +786,8 @@
     "webp",
     "y4m",
     "webm",
+    "ivf",
+    "mjpeg",
     "theora",
     "animated_webp",
     "apng",
@@ -840,6 +854,7 @@
     "ncore_v4",
     "euroc_dataset",
     "rtmv",
+    "mp4",
     "image_sequence"
   ],
   "row_key_variants": {

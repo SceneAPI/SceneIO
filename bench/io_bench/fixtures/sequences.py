@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -98,6 +99,126 @@ def _webm_fixture(side):
         "frames": frames,
         "durations_ms": durations_ms,
     }
+
+
+def _ivf_fixture(side):
+    frame_count = 4
+    rng = np.random.default_rng(61)
+    y = rng.integers(16, 236, (frame_count, side, side), dtype=np.uint8)
+    chroma_side = (side + 1) // 2
+    u = rng.integers(
+        16, 241, (frame_count, chroma_side, chroma_side), dtype=np.uint8
+    )
+    v = rng.integers(
+        16, 241, (frame_count, chroma_side, chroma_side), dtype=np.uint8
+    )
+    duration_ns = 40_000_000
+    durations = np.full(frame_count, duration_ns, np.int64)
+    timestamps = np.arange(frame_count, dtype=np.int64) * duration_ns
+    record = _core.image_sequence_yuv(
+        y,
+        u,
+        v,
+        timestamps,
+        durations,
+        "420",
+        "unspecified",
+        "limited",
+        "bt601",
+        "progressive",
+        25,
+        1,
+        1,
+        1,
+    )
+    return record, {"y": y, "u": u, "v": v}
+
+
+def _mjpeg_fixture(side):
+    frame_count = 4
+    rng = np.random.default_rng(67)
+    frames = rng.integers(
+        0, 256, (frame_count, side, side, 3), dtype=np.uint8
+    )
+    empty = np.empty(0, np.int64)
+    record = _core.image_sequence_packed(
+        frames,
+        empty,
+        empty,
+        "srgb",
+        "none",
+    )
+    return record, {"frames": frames}
+
+
+def _box(kind: bytes, payload: bytes) -> bytes:
+    return struct.pack(">I4s", len(payload) + 8, kind) + payload
+
+
+def _full_box(kind: bytes, payload: bytes) -> bytes:
+    return _box(kind, b"\0\0\0\0" + payload)
+
+
+def _ivf_packets(data: bytes) -> tuple[bytes, ...]:
+    count = int.from_bytes(data[24:28], "little")
+    packets = []
+    position = 32
+    for _ in range(count):
+        size = int.from_bytes(data[position : position + 4], "little")
+        position += 12
+        packets.append(data[position : position + size])
+        position += size
+    return tuple(packets)
+
+
+def _minimal_av1_mp4(sequence) -> bytes:
+    packets = _ivf_packets(
+        bytes(_core.write_ivf(sequence, codec="av1", threads=1))
+    )
+    ftyp = _box(b"ftyp", b"isom\x00\x00\x02\x00isomav01")
+    mdat = _box(b"mdat", b"".join(packets))
+    sample_offset = len(ftyp) + 8
+    visual_entry = bytearray(78)
+    visual_entry[6:8] = struct.pack(">H", 1)
+    visual_entry[24:28] = struct.pack(">HH", sequence.width, sequence.height)
+    av01 = _box(
+        b"av01",
+        bytes(visual_entry)
+        + _box(b"av1C", b"\x81\x00\x0c\x00")
+        + _box(b"colr", b"nclx" + struct.pack(">HHHB", 1, 1, 6, 0)),
+    )
+    stsd = _full_box(b"stsd", struct.pack(">I", 1) + av01)
+    stsz = _full_box(
+        b"stsz",
+        struct.pack(">II", 0, len(packets))
+        + b"".join(struct.pack(">I", len(packet)) for packet in packets),
+    )
+    stsc = _full_box(b"stsc", struct.pack(">IIII", 1, 1, len(packets), 1))
+    stco = _full_box(b"stco", struct.pack(">II", 1, sample_offset))
+    stts = _full_box(b"stts", struct.pack(">III", 1, len(packets), 1))
+    stbl = _box(b"stbl", stsd + stsz + stsc + stco + stts)
+    mdhd = _full_box(
+        b"mdhd", struct.pack(">IIII", 0, 0, 25, len(packets))
+    )
+    mdia = _box(
+        b"mdia",
+        mdhd + _full_box(b"hdlr", b"\0\0\0\0vide") + _box(b"minf", stbl),
+    )
+    mvhd = _full_box(
+        b"mvhd", struct.pack(">IIII", 0, 0, 1000, len(packets) * 40)
+    )
+    return ftyp + mdat + _box(b"moov", mvhd + _box(b"trak", mdia))
+
+
+def _mp4_path_fixture(root, scale):
+    side = max(8, int(256 * scale**0.5))
+    if side % 2:
+        side += 1
+    record, payload = _ivf_fixture(side)
+    path = Path(root) / "_mp4_input.mp4"
+    path.write_bytes(_minimal_av1_mp4(record))
+    logical_bytes = sum(value.nbytes for value in payload.values())
+    return path, logical_bytes
 
 
 def _theora_fixture(side):
@@ -270,6 +391,9 @@ __all__ = [
     "_animated_webp_fixture",
     "_apng_fixture",
     "_image_sequence_directory_fixture",
+    "_ivf_fixture",
+    "_mjpeg_fixture",
+    "_mp4_path_fixture",
     "_rtmv_directory_fixture",
     "_theora_fixture",
     "_webm_fixture",

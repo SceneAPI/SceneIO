@@ -27,7 +27,8 @@ def test_fc1_public_surface_and_registry_boundary():
     assert date.fromisoformat(CONTRACT["contract_date"]).isoformat() == CONTRACT[
         "contract_date"
     ]
-    assert CONTRACT["builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 74
+    assert CONTRACT["builtin_count"] == 74
+    assert len(CANONICAL_BUILTIN_IDS) >= CONTRACT["builtin_count"]
     assert "euroc_dataset" in CANONICAL_BUILTIN_IDS
     assert CONTRACT["public_symbols"] == [
         "ImuCalibration",

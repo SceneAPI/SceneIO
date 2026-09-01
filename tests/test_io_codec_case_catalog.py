@@ -27,7 +27,7 @@ def test_case_catalog_is_complete_ordered_and_immutable():
     definitions = codec_cases.CODEC_CASE_DEFINITIONS
     assert tuple(case.id for case in definitions) == CANONICAL_BUILTIN_IDS
     assert tuple(codec_cases.CASES_BY_ID) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 74
+    assert len(definitions) == len(codec_cases.CASES_BY_ID) == 77
     assert all(dataclasses.is_dataclass(case) for case in definitions)
     with pytest.raises(dataclasses.FrozenInstanceError):
         definitions[0].id = "changed"
@@ -71,6 +71,8 @@ def test_case_catalog_preserves_the_canonical_fixture_partitions():
         "webp",
         "y4m",
         "webm",
+        "ivf",
+        "mjpeg",
         "theora",
         "animated_webp",
         "apng",
@@ -97,6 +99,7 @@ def test_case_catalog_preserves_the_canonical_fixture_partitions():
         "usdz",
         "colmap_db",
         "avif",
+        "mp4",
         "animated_avif",
         "hdf5",
         "hloc_features",
@@ -155,6 +158,8 @@ def test_case_catalog_preserves_the_canonical_fixture_partitions():
         "webp",
         "y4m",
         "webm",
+        "ivf",
+        "mjpeg",
         "theora",
         "animated_webp",
         "apng",
@@ -188,7 +193,7 @@ def test_case_catalog_preserves_the_canonical_fixture_partitions():
         for case in built_cases
         if case.id != "compressed_ply"
     ]
-    assert len(portable_fixture_projection) == 51
+    assert len(portable_fixture_projection) == 53
     assert next(
         item for item in portable_fixture_projection if item[0] == "sog"
     ) == (
@@ -212,12 +217,26 @@ def test_case_catalog_preserves_the_canonical_fixture_partitions():
         822,
         "07cc5a95580ddd861331d3dc6cb0b6fd3c5ec7613191141d1715ed8a39b2629b",
     )
+    assert next(
+        item for item in portable_fixture_projection if item[0] == "ivf"
+    ) == (
+        "ivf",
+        377,
+        "bcbd24082a7d7f558a1a36baf17ef0193b4fe2ba2bbfb5c6586868b634707fa1",
+    )
+    assert next(
+        item for item in portable_fixture_projection if item[0] == "mjpeg"
+    ) == (
+        "mjpeg",
+        2939,
+        "b72f6bd8dcbe488145e0dcd9e1967a1016e8fa951ad23724a60d108124d91d9d",
+    )
     fixture_payload = json.dumps(
         portable_fixture_projection,
         separators=(",", ":"),
     )
     assert hashlib.sha256(fixture_payload.encode()).hexdigest() == (
-        "ae4dc5b567ffa8c6c22f010f8951337a7c007332ce827154c0b6b8ef30972548"
+        "f60d8eb06f5e9a19b3768a7b8a3b55ac9d95ff6ac804edfc4deff3aea5fad952"
     )
     cases_by_id = {case.id: case for case in built_cases}
     assert (
@@ -245,11 +264,11 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         capability = capabilities[case.id]
         assert capability.available
         assert capability.can_read
-        assert capability.can_write is (case.id != "rtmv")
+        assert capability.can_write is (case.id not in {"rtmv", "mp4"})
         assert capability.can_inspect
         assert capability.streams_read
         assert capability.streams_write is (
-            case.id not in {"avif", "animated_avif", "rtmv"}
+            case.id not in {"avif", "animated_avif", "rtmv", "mp4"}
         )
         assert case.partial_selectors == capability.partial_selectors
     assert tuple(case.id for case in codec_cases.PARTIAL_CASES) == (
@@ -273,6 +292,9 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
         "webp",
         "y4m",
         "webm",
+        "ivf",
+        "mjpeg",
+        "mp4",
         "theora",
         "animated_avif",
         "rtmv",
@@ -294,7 +316,7 @@ def test_case_catalog_selectors_match_live_builtin_capabilities():
     assert sum(
         len(case.partial_selectors)
         for case in codec_cases.PARTIAL_CASES
-    ) == 43
+    ) == 46
 
 
 def test_runtime_extensions_do_not_enter_repository_case_completeness():

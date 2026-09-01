@@ -213,7 +213,7 @@ kind-specific contract is authoritative.
 
 `Codec.payload_kind` is the single stored codec payload field, and
 `CodecCapabilities.payload_kind` exposes the same concept in discovery
-metadata. The closed vocabulary below applies only to the 74 repository-owned
+metadata. The closed vocabulary below applies only to the 77 repository-owned
 built-ins; runtime extensions may continue to use external tokens.
 
 Logical DataType is shown only when the relationship is exact. It is not
@@ -230,7 +230,7 @@ file profile or an explicitly selected semantic interpretation.
 | `feature_set` | static | `sceneio.FeatureSet`, `sceneio.HlocFeatureStore` | `feature_set` | `hloc_features` |
 | `flow` | static | `sceneio.FlowField` | - | `flo` |
 | `image` | static | `sceneio.Image` | - | `netpbm`, `png`, `jpeg`, `bmp`, `tga`, `hdr`, `exr`, `webp`, `avif` |
-| `image_sequence` | static | `sceneio.ImageSequence` | `image_sequence` | `y4m`, `webm`, `theora`, `animated_webp`, `apng`, `animated_avif`, `image_sequence` |
+| `image_sequence` | static | `sceneio.ImageSequence` | `image_sequence` | `y4m`, `webm`, `ivf`, `mjpeg`, `mp4`, `theora`, `animated_webp`, `apng`, `animated_avif`, `image_sequence` |
 | `match_graph` | static | `sceneio.ColmapDatabase`, `sceneio.HlocMatchStore`, `sceneio.CorrespondenceGraph` | `match_graph` | `colmap_db`, `hloc_matches` |
 | `mesh` | static | `sceneio.Mesh` | - | `ply_mesh`, `obj`, `stl`, `off` |
 | `scene_graph` | static | `sceneio.SceneGraph` | - | `gltf`, `glb`, `usd`, `usdz` |

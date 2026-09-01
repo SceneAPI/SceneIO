@@ -303,6 +303,7 @@ bool is_animated_webp(nb::handle source) {
 void validate_writer_input(const ImageSequence &sequence) {
     validate_image_sequence(sequence, "animated webp");
     require_no_image_sequence_acquisition(sequence, "animated webp");
+    require_no_image_sequence_projection(sequence, "animated webp");
     if (sequence.storage_mode != "packed" ||
         sequence.frame_dtype != "uint8")
         throw std::invalid_argument(

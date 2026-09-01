@@ -64,9 +64,7 @@ def native_feature_capabilities(
     return _native_feature_snapshots(
         _core.__native_features__,
         name,
-        unknown_feature=lambda feature: FormatError(
-            f"unknown native feature {feature!r}"
-        ),
+        unknown_feature=lambda feature: FormatError(f"unknown native feature {feature!r}"),
     )
 
 
@@ -111,9 +109,7 @@ def _install_builtin_family(
     if len(actual_ids) != len(set(actual_ids)):
         raise ValueError(f"built-in family ids must be unique: {actual_ids!r}")
     if actual_ids != tuple(expected_ids):
-        raise ValueError(
-            f"built-in family ids {actual_ids!r} do not match {tuple(expected_ids)!r}"
-        )
+        raise ValueError(f"built-in family ids {actual_ids!r} do not match {tuple(expected_ids)!r}")
     collisions = tuple(format_id for format_id in actual_ids if format_id in REGISTRY)
     if collisions:
         raise ValueError(f"built-in codec ids already registered: {collisions!r}")
@@ -140,24 +136,33 @@ def detect(path) -> str:
     )
 
 
-def _inspect_registered_path(path: str | Path):
-    """Inspect through this registry without importing the public I/O facade."""
+def _inspect_registered_image_path(path: str | Path):
+    """Resolve and inspect one canonical still-image frame."""
 
     fmt = detect(path)
     codec = get(fmt)
+    if codec.record is not _core.Image or codec.payload_kind != "image":
+        record_name = getattr(codec.record, "__name__", "None")
+        raise ValueError(
+            f"image frame {Path(path).name!r} resolves to format {fmt!r} "
+            f"with payload {codec.payload_kind!r}/{record_name}, not Image"
+        )
     try:
-        return inspect_codec(path, fmt, codec.payload_kind, codec.inspect)
+        result = inspect_codec(path, fmt, codec.payload_kind, codec.inspect)
     except FormatError:
         raise
     except Exception as exc:
         raise FormatError(f"inspecting {str(path)!r} as {fmt!r}: {exc}") from exc
+    if result.format != fmt or result.payload_kind != "image":
+        raise ValueError(f"image frame inspector for {fmt!r} returned an inconsistent contract")
+    return result
 
 
 def _registered_image_extensions() -> frozenset[str]:
     return frozenset(
         extension
         for codec in REGISTRY.values()
-        if codec.record is _core.Image
+        if codec.record is _core.Image and codec.payload_kind == "image"
         for extension in codec.extensions
     )
 
@@ -182,9 +187,7 @@ def _sog_reader(path: str):
 def _sog_point_reader(path: str, start: int, stop: int):
     value = Path(path)
     if value.is_dir() or value.name == "meta.json":
-        return _core.read_sog_directory_points(
-            str(_sog_metadata_path(path)), start, stop
-        )
+        return _core.read_sog_directory_points(str(_sog_metadata_path(path)), start, stop)
     return _SOG_ARCHIVE_POINT_READER(path, start, stop)
 
 
@@ -232,7 +235,7 @@ _define_builtin_family("dense", DENSE_CODECS)
 _define_builtin_family("images", IMAGE_CODECS)
 _IMAGE_FRAME_ACCESS = ImageFrameAccess(
     extensions=_registered_image_extensions,
-    inspect=_inspect_registered_path,
+    inspect=_inspect_registered_image_path,
 )
 _define_builtin_family(
     "datasets",

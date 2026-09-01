@@ -151,18 +151,21 @@ _PAYLOADS = (
     _payload(
         "image",
         "Image",
-        "One decoded image with explicit stored-sample metadata.",
+        "One decoded image with explicit stored-sample and projection metadata.",
         ("sceneio.Image",),
         ("netpbm", "png", "jpeg", "bmp", "tga", "hdr", "exr", "webp", "avif"),
     ),
     _payload(
         "image_sequence",
         "Image sequence",
-        "Ordered encoded or decoded image/video frames with timing metadata.",
+        "Ordered encoded or decoded image/video frames with homogeneous sample, projection, and timing metadata.",
         ("sceneio.ImageSequence",),
         (
             "y4m",
             "webm",
+            "ivf",
+            "mjpeg",
+            "mp4",
             "theora",
             "animated_webp",
             "apng",

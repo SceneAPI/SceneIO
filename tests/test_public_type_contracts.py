@@ -549,7 +549,7 @@ def test_payload_catalog_exactly_covers_builtin_registry() -> None:
     assert len(payload_ids) == SNAPSHOT["payload_kind_count"] == 27
     definitions = io_registry.BUILTIN_DEFINITIONS
     assert tuple(codec.id for codec in definitions) == CANONICAL_BUILTIN_IDS
-    assert len(definitions) == SNAPSHOT["builtin_format_count"] == 74
+    assert len(definitions) == SNAPSHOT["builtin_format_count"] == 77
     declared_formats = tuple(
         format_id
         for payload in BUILTIN_CODEC_PAYLOAD_KINDS.values()

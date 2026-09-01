@@ -5,6 +5,19 @@ kept in [`docs/releases/`](docs/releases/).
 
 ## Unreleased
 
+- Added native, FFmpeg-free IVF VP8/VP9/AV1 and raw MJPEG read/write,
+  read-only classic AV1 MP4/M4V/MOV, and an AV1 temporal WebM profile. The
+  registry now exposes 77 readable, 75 writable, and 77 inspectable formats,
+  with 46 bounded selectors across 40 formats.
+- Vendored pinned libaom 3.13.1 source and its license/patent notices for
+  offline AV1 decoding and encoding across the native sequence codecs.
+- Added canonical 360° equirectangular `Image` metadata, full/cropped GPano
+  JPEG XMP read/write/inspection, explicit metadata-free panorama reads,
+  COLMAP-compatible pixel/ray transforms, and camera model 17 construction.
+- Made image folders content-aware rather than extension-trusting, added the
+  typed `read_image_folder`/`write_image_folder` APIs, version-2 manifests,
+  packed-frame encoding, and the same homogeneous equirectangular projection
+  contract on `ImageSequence`. Shared-extension animations now fail closed.
 - Made `payload_kind` the single codec and inspection payload field; removed
   the duplicate `datatype` alias and compatibility-only module/pickle
   identities. Public records now retain their real, importable definition

@@ -32,6 +32,11 @@ def _path_sequence(
     readout_step_durations_ns: np.ndarray | None = None,
     readout_directions: list[str] | None = None,
     timestamp_reference: str = "unknown",
+    projection: str = "unknown",
+    projection_canvas_width: int | None = None,
+    projection_canvas_height: int | None = None,
+    projection_crop_left: int | None = None,
+    projection_crop_top: int | None = None,
 ):
     paths = ["a.png", "b.png"] if paths is None else paths
     names = ["a.png", "b.png"] if names is None else names
@@ -52,6 +57,11 @@ def _path_sequence(
         readout_step_durations_ns=readout_step_durations_ns,
         readout_directions=readout_directions,
         timestamp_reference=timestamp_reference,
+        projection=projection,
+        projection_canvas_width=projection_canvas_width,
+        projection_canvas_height=projection_canvas_height,
+        projection_crop_left=projection_crop_left,
+        projection_crop_top=projection_crop_top,
     )
 
 
@@ -73,6 +83,11 @@ def _yuv_sequence(
     readout_step_durations_ns: np.ndarray | None = None,
     readout_directions: list[str] | None = None,
     timestamp_reference: str = "unknown",
+    projection: str = "unknown",
+    projection_canvas_width: int | None = None,
+    projection_canvas_height: int | None = None,
+    projection_crop_left: int | None = None,
+    projection_crop_top: int | None = None,
 ):
     timestamps = _empty_timing() if timestamps is None else timestamps
     durations = _empty_timing() if durations is None else durations
@@ -95,6 +110,11 @@ def _yuv_sequence(
         readout_step_durations_ns=readout_step_durations_ns,
         readout_directions=readout_directions,
         timestamp_reference=timestamp_reference,
+        projection=projection,
+        projection_canvas_width=projection_canvas_width,
+        projection_canvas_height=projection_canvas_height,
+        projection_crop_left=projection_crop_left,
+        projection_crop_top=projection_crop_top,
     )
 
 
@@ -112,6 +132,11 @@ def _packed_sequence(
     readout_step_durations_ns: np.ndarray | None = None,
     readout_directions: list[str] | None = None,
     timestamp_reference: str = "unknown",
+    projection: str = "unknown",
+    projection_canvas_width: int | None = None,
+    projection_canvas_height: int | None = None,
+    projection_crop_left: int | None = None,
+    projection_crop_top: int | None = None,
 ):
     timestamps = _empty_timing() if timestamps is None else timestamps
     durations = _empty_timing() if durations is None else durations
@@ -128,6 +153,11 @@ def _packed_sequence(
         readout_step_durations_ns=readout_step_durations_ns,
         readout_directions=readout_directions,
         timestamp_reference=timestamp_reference,
+        projection=projection,
+        projection_canvas_width=projection_canvas_width,
+        projection_canvas_height=projection_canvas_height,
+        projection_crop_left=projection_crop_left,
+        projection_crop_top=projection_crop_top,
     )
 
 
@@ -301,9 +331,7 @@ def test_acquisition_timing_is_owned_exact_and_declares_equation():
 
     # Top-to-bottom uses d=+1. The reference instant for raster row 3 is
     # therefore t + 3*r; exposure midpoint semantics are declared separately.
-    assert sequence.timestamps_ns[0] + 3 * sequence.readout_step_durations_ns[0] == (
-        100_030_000
-    )
+    assert sequence.timestamps_ns[0] + 3 * sequence.readout_step_durations_ns[0] == (100_030_000)
 
 
 def test_global_acquisition_omits_step_durations_and_zero_is_present():
@@ -446,9 +474,7 @@ def test_acquisition_views_keep_temporary_record_alive():
         ),
     ],
 )
-def test_acquisition_timing_rejects_ambiguous_or_invalid_combinations(
-    kwargs, message
-):
+def test_acquisition_timing_rejects_ambiguous_or_invalid_combinations(kwargs, message):
     with pytest.raises(ValueError, match=message):
         _path_sequence(**kwargs)
 
@@ -552,16 +578,10 @@ def test_animated_avif_writer_refuses_unrepresented_acquisition_timing():
         ("444", "unspecified", (2, 5, 7)),
     ],
 )
-def test_planar_layouts_preserve_odd_dimensions_bit_exact(
-    subsampling, siting, chroma_shape
-):
+def test_planar_layouts_preserve_odd_dimensions_bit_exact(subsampling, siting, chroma_shape):
     y = np.arange(2 * 5 * 7, dtype=np.uint8).reshape(2, 5, 7)
-    u = (np.arange(np.prod(chroma_shape), dtype=np.uint8) + 71).reshape(
-        chroma_shape
-    )
-    v = (np.arange(np.prod(chroma_shape), dtype=np.uint8) + 139).reshape(
-        chroma_shape
-    )
+    u = (np.arange(np.prod(chroma_shape), dtype=np.uint8) + 71).reshape(chroma_shape)
+    v = (np.arange(np.prod(chroma_shape), dtype=np.uint8) + 139).reshape(chroma_shape)
     expected_y = y.copy()
     expected_u = u.copy()
     expected_v = v.copy()
@@ -693,3 +713,67 @@ def test_planar_factory_rejects_wrong_dtype_or_rank():
         _yuv_sequence(np.zeros((1, 2, 3), np.uint16))
     with pytest.raises(ValueError, match=r"Y plane.*N,H,W"):
         _yuv_sequence(np.zeros((2, 3), np.uint8))
+
+
+def test_projection_contract_is_shared_by_all_sequence_storage_modes():
+    path = _path_sequence(height=4, width=8)
+    packed = _packed_sequence(np.zeros((2, 4, 8, 3), np.uint8))
+    yuv = _yuv_sequence(
+        np.zeros((2, 4, 8), np.uint8),
+        np.zeros((2, 2, 4), np.uint8),
+        np.zeros((2, 2, 4), np.uint8),
+    )
+    for sequence in (path, packed, yuv):
+        assert sequence.projection == "unknown"
+        assert sequence.projection_canvas_width == 0
+        assert sequence.projection_canvas_height == 0
+        assert sequence.projection_crop_left == 0
+        assert sequence.projection_crop_top == 0
+        assert not sequence.is_full_sphere
+
+    full = _packed_sequence(
+        np.zeros((2, 4, 8, 3), np.uint8),
+        projection="equirectangular",
+    )
+    assert full.projection == "equirectangular"
+    assert full.projection_canvas_width == 8
+    assert full.projection_canvas_height == 4
+    assert full.is_full_sphere
+
+    crop = _path_sequence(
+        height=2,
+        width=3,
+        projection="equirectangular",
+        projection_canvas_width=8,
+        projection_canvas_height=4,
+        projection_crop_left=3,
+        projection_crop_top=1,
+    )
+    assert crop.projection_canvas_width == 8
+    assert crop.projection_canvas_height == 4
+    assert crop.projection_crop_left == 3
+    assert crop.projection_crop_top == 1
+    assert not crop.is_full_sphere
+
+
+def test_sequence_projection_declaration_is_immutable_and_validated():
+    sequence = _packed_sequence(np.zeros((2, 4, 8, 3), np.uint8))
+    declared = sceneio.as_equirectangular(sequence)
+    assert declared is not sequence
+    assert declared.is_full_sphere
+    assert sceneio.as_equirectangular(declared) is declared
+    assert sceneio.equirectangular_camera(declared).model_id == 17
+
+    with pytest.raises(ValueError, match="requires projection"):
+        _path_sequence(projection_canvas_width=8)
+    with pytest.raises(ValueError, match="exceeds"):
+        _path_sequence(
+            projection="equirectangular",
+            projection_canvas_width=4,
+            projection_canvas_height=4,
+        )
+
+
+def test_encoded_uint16_default_maxval_is_dtype_exact():
+    sequence = _path_sequence(dtype="uint16")
+    assert sequence.maxval == 65535

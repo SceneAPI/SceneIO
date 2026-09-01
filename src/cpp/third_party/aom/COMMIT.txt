@@ -1,0 +1,31 @@
+libaom 3.13.1 portable source archive
+
+Upstream: https://aomedia.googlesource.com/aom
+Revision: d772e334cc724105040382a977ebb10dfd393293
+Version: 3.13.1
+Retrieved: 2026-08-31 from the pinned colmap_mod vcpkg source cache
+License: BSD-2-Clause with the Alliance for Open Media patent grant.
+
+Repository-contained source archive:
+
+  aom-d772e334cc724105040382a977ebb10dfd393293.tar.gz
+  Size: 6252289 bytes
+  SHA-256: b35239b1547516833fcb5bde03e49c945e93b8e7240a5fe7e19ada46aae69f32
+
+CMake extracts this immutable archive into the build tree and configures the
+upstream project for a portable generic CPU, static-library, 8-bit AV1
+encode/decode build. Tests, examples, tools, documentation, and test data are
+disabled; high-bit-depth decode support is enabled so 10- and 12-bit AV1 input
+can be normalized to SceneIO's uint8 in-memory representation. No build step
+downloads native sources.
+
+Exact retained-file hashes:
+
+  LICENSE
+  SHA-256: 4764a286d8b2faeaf42f4418e7d7a28d58fc8fd4d00a3d0a7f44b0a4099de7f2
+
+  PATENTS
+  SHA-256: 661fb8e504744e95587b556b94a58343448300606a41bea8c7a9b97125696e61
+
+Exact upstream LICENSE and PATENTS copies are stored beside the archive and
+mirrored in LICENSES/aom.txt and LICENSES/aom-patents.txt.

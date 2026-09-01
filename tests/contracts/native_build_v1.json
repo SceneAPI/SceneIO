@@ -10,11 +10,11 @@
   "cmake_file_sha256": {
     "CMakeLists.txt": "0d1cc86983a58b41ff327411df24b5f9ff6d7c9fed53dd9506cb7bb532696100",
     "cmake/SceneIOInstrumentation.cmake": "f4a6ecf75085215628b6d603dd47922ad2b8e730e0c05d09f5cd33193ff0e4a3",
-    "cmake/SceneIOSources.cmake": "ce63e4539fb7e0065116c3c525f9caadfb0a9581665bf326b7a6a29b4c9e52f9",
-    "cmake/SceneIODependencies.cmake": "b737fb608b961002db73d54f71785fd506126fb53beaf2e721c5ef32e4f2c130",
+    "cmake/SceneIOSources.cmake": "3ec2e66d492535806c3e40e40551f6f644bc415874ff36fe09dc5dbe7094ee73",
+    "cmake/SceneIODependencies.cmake": "8339075aaccdbcb38b2f5546ae4ea16f3da1a9a2dff3824d1d17d7a44b875f0e",
     "cmake/SceneIOCameraModels.cmake": "be4196eeefed38f8d16006acaca7282fa391e1cb44bc9020a9b54ad8e6cdbd7f",
     "cmake/SceneIOBackendQualification.cmake": "bfd4d8921a2ca7935fc7c728004fd1d623f37deb699fc5c7f99c28667aea502d",
-    "cmake/SceneIOTargets.cmake": "f1f38f7f55f042679ebff720f006983bcd7838ecb72f36ce5d171aa3d8e4b655",
+    "cmake/SceneIOTargets.cmake": "8e14f08e6dc427a21851631eee28771520fc8f09c81de7bf770c00e616fe9b19",
     "cmake/SceneIORecordJpegSimd.cmake": "629d84c45808b14dedf6edcdaedc82778652c34600a41f7f09db91d29b392cde"
   },
   "codec_source_owners": {
@@ -68,8 +68,12 @@
       "src/cpp/codecs/reconstruction/openmvg.cpp"
     ],
     "sequences": [
+      "src/cpp/codecs/sequences/av1_obu.cpp",
       "src/cpp/codecs/sequences/apng.cpp",
       "src/cpp/codecs/sequences/animated_webp.cpp",
+      "src/cpp/codecs/sequences/ivf.cpp",
+      "src/cpp/codecs/sequences/mjpeg.cpp",
+      "src/cpp/codecs/sequences/mp4.cpp",
       "src/cpp/codecs/sequences/theora.cpp",
       "src/cpp/codecs/sequences/webm.cpp",
       "src/cpp/codecs/sequences/y4m.cpp"
@@ -185,7 +189,10 @@
     "register_animated_webp",
     "register_apng",
     "register_webm",
-    "register_theora"
+    "register_theora",
+    "register_ivf",
+    "register_mjpeg",
+    "register_mp4"
   ],
   "core_link_order": [
     "src/cpp/module.cpp",
@@ -254,7 +261,11 @@
     "src/cpp/codecs/points/las.cpp",
     "src/cpp/codecs/points/laz.cpp",
     "src/cpp/codecs/sequences/apng.cpp",
+    "src/cpp/codecs/sequences/av1_obu.cpp",
     "src/cpp/codecs/sequences/animated_webp.cpp",
+    "src/cpp/codecs/sequences/ivf.cpp",
+    "src/cpp/codecs/sequences/mjpeg.cpp",
+    "src/cpp/codecs/sequences/mp4.cpp",
     "src/cpp/codecs/sequences/theora.cpp",
     "src/cpp/codecs/sequences/webm.cpp",
     "src/cpp/codecs/sequences/y4m.cpp",
@@ -281,6 +292,7 @@
     "webpdemux",
     "libwebpmux",
     "sceneio_vpx",
+    "aom",
     "ogg",
     "theora_static",
     "Threads::Threads"

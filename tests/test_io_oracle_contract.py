@@ -38,7 +38,7 @@ def _has_named_direction(names: tuple[str, ...], markers: list[str]) -> bool:
 
 
 def test_every_builtin_has_executable_independent_oracle_evidence():
-    assert CONTRACT["expected_builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 74
+    assert CONTRACT["expected_builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 77
     assert tuple(entry["id"] for entry in LEDGER) == CANONICAL_BUILTIN_IDS
     assert len({entry["id"] for entry in LEDGER}) == len(LEDGER)
 

@@ -48,7 +48,8 @@ _SPECIAL_PROFILES = {
     },
     "laz": {"legacy_formats_0_3", "layered_formats_6_8"},
     "spz": {"legacy_v3_gzip", "ngsp_v4_zstd"},
-    "webm": {"default", "vp8-temporal", "vp9-temporal"},
+    "webm": {"default", "vp8-temporal", "vp9-temporal", "av1-temporal"},
+    "ivf": {"vp8", "vp9", "av1"},
 }
 
 
@@ -70,14 +71,14 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
         "backlog and do not claim qualification"
     )
     assert ledger["r6_unmeasured_profile_policy"] == (
-        "14 specialized provisional rows are accepted for correctness and "
+        "25 specialized provisional rows are accepted for correctness and "
         "compatibility only; R6 makes no profile-specific performance claim "
         "for them"
     )
 
     codecs = ledger["codec"]
     assert tuple(item["id"] for item in codecs) == CANONICAL_BUILTIN_IDS
-    assert len({item["id"] for item in codecs}) == 74
+    assert len({item["id"] for item in codecs}) == 77
     for item in codecs:
         ownership = BUILTIN_OWNERSHIP[item["id"]]
         assert item["family"] == ownership.family
@@ -96,7 +97,7 @@ def test_performance_ledger_has_stable_schema_and_exact_builtin_coverage():
 
 def test_performance_operations_cover_required_profiles_and_directions():
     operations = _ledger()["operation"]
-    assert len(operations) == 184
+    assert len(operations) == 196
     keys = [
         (item["codec_id"], item["profile"], item["direction"])
         for item in operations
@@ -118,9 +119,9 @@ def test_performance_rows_are_honest_about_initial_evidence():
     operations = _ledger()["operation"]
     states = Counter(item["status"] for item in operations)
     assert states == {
-        "provisional": 175,
+        "provisional": 186,
         "known_gap": 2,
-        "not_applicable": 7,
+        "not_applicable": 8,
     }
     provisional = [
         item for item in operations if item["status"] == "provisional"
@@ -132,7 +133,7 @@ def test_performance_rows_are_honest_about_initial_evidence():
         (
             "profile-specific current-backend measurement missing",
             "candidate comparison on all required toolchains",
-        ): 14,
+        ): 25,
         ("three-platform package validation",): 8,
     }
     assert all(item["candidate_backends"] == [] for item in provisional)
@@ -308,6 +309,10 @@ def test_performance_backend_versions_match_pinned_sources():
         "libtheora": (
             "8e4808736e9c181b971306cc3f05df9e61354004",
             "src/cpp/third_party/theora/COMMIT.txt",
+        ),
+        "libaom": (
+            "d772e334cc724105040382a977ebb10dfd393293",
+            "src/cpp/third_party/aom/COMMIT.txt",
         ),
         "lazperf": (
             "b7bbe26109dc986f42d4fc80b8de3d2b6ca634ce",

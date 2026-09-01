@@ -53,7 +53,14 @@ IMAGE_CODECS: tuple[Codec, ...] = (
         payload_kind="image",
         magic=(b"\xff\xd8\xff",),
         lossy=True,
-        supported_features=("baseline", "progressive", "grayscale_read", "rgb"),
+        supported_features=(
+            "baseline",
+            "progressive",
+            "grayscale_read",
+            "rgb",
+            "equirectangular_xmp",
+            "gpano_full_and_cropped_canvas",
+        ),
         unsupported_features=("cmyk_write", "rgba_write"),
     ),
     Codec(

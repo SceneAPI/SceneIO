@@ -1,7 +1,7 @@
 # COLMAP workflow adapters
 
 `sceneio.colmap` owns portable COLMAP ecosystem data that is not a standalone
-entry in the 74-format registry. These adapters are implemented in this
+entry in the 77-format registry. These adapters are implemented in this
 repository, require only NumPy at runtime, and never open an encoded image or
 video referenced by a path.
 

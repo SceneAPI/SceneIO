@@ -75,9 +75,7 @@ def _next_tokens(
 
 
 def inspect_netpbm(path: Path, payload_kind: str) -> Inspection:
-    magic, width_raw, height_raw, maxval_raw = _next_tokens(
-        path, 4, extended_whitespace=True
-    )
+    magic, width_raw, height_raw, maxval_raw = _next_tokens(path, 4, extended_whitespace=True)
     if magic not in {b"P2", b"P3", b"P5", b"P6"}:
         raise ValueError("netpbm: bad magic")
     width = _unsigned_decimal(width_raw, "netpbm width")
@@ -108,8 +106,8 @@ def inspect_png(path: Path, payload_kind: str) -> Inspection:
         if length != 13 or kind != b"IHDR":
             raise ValueError("png: missing IHDR")
         ihdr = _exact(stream, 13, "PNG IHDR")
-        width, height, bitdepth, color_type, compression, filtering, interlace = (
-            struct.unpack(">IIBBBBB", ihdr)
+        width, height, bitdepth, color_type, compression, filtering, interlace = struct.unpack(
+            ">IIBBBBB", ihdr
         )
         ihdr_crc = struct.unpack(">I", _exact(stream, 4, "PNG IHDR CRC"))[0]
         if binascii.crc32(b"IHDR" + ihdr) != ihdr_crc:
@@ -132,12 +130,7 @@ def inspect_png(path: Path, payload_kind: str) -> Inspection:
                 raise ValueError("png: chunk runs past end of file")
             metadata_payload = None
             if kind == b"PLTE":
-                if (
-                    palette_entries is not None
-                    or length == 0
-                    or length > 768
-                    or length % 3
-                ):
+                if palette_entries is not None or length == 0 or length > 768 or length % 3:
                     raise ValueError("png: invalid PLTE chunk")
                 palette_entries = length // 3
                 if color_type == 3 and palette_entries > 2**bitdepth:
@@ -151,9 +144,7 @@ def inspect_png(path: Path, payload_kind: str) -> Inspection:
                     if palette_entries is None or length > palette_entries:
                         raise ValueError("png: invalid palette tRNS chunk")
                     metadata_payload = _exact(stream, length, "PNG tRNS")
-                    palette_alpha = any(
-                        value != 255 for value in metadata_payload
-                    )
+                    palette_alpha = any(value != 255 for value in metadata_payload)
                 else:
                     raise ValueError("png: non-palette tRNS is unsupported")
             elif kind == b"IEND":
@@ -162,9 +153,7 @@ def inspect_png(path: Path, payload_kind: str) -> Inspection:
                 raise ValueError(f"png: unsupported critical chunk {kind!r}")
             else:
                 stream.seek(length, 1)
-            chunk_crc = struct.unpack(
-                ">I", _exact(stream, 4, "PNG chunk CRC")
-            )[0]
+            chunk_crc = struct.unpack(">I", _exact(stream, 4, "PNG chunk CRC"))[0]
             if (
                 metadata_payload is not None
                 and binascii.crc32(kind + metadata_payload) != chunk_crc
@@ -210,6 +199,89 @@ def inspect_png(path: Path, payload_kind: str) -> Inspection:
 
 _JPEG_SOF = {0xC0, 0xC1, 0xC2}
 _JPEG_ALL_SOF = set(range(0xC0, 0xD0)) - {0xC4, 0xC8, 0xCC}
+_JPEG_XMP_IDENTIFIER = b"http://ns.adobe.com/xap/1.0/\0"
+
+
+def _jpeg_xmp_value(xml: bytes, key: bytes) -> bytes | None:
+    attribute = re.search(
+        re.escape(key) + rb"\s*=\s*(['\"])(.*?)\1",
+        xml,
+        re.DOTALL,
+    )
+    if attribute is not None:
+        return attribute.group(2).strip()
+    element = re.search(
+        rb"<\s*" + re.escape(key) + rb"\s*>(.*?)</\s*" + re.escape(key) + rb"\s*>",
+        xml,
+        re.DOTALL,
+    )
+    return None if element is None else element.group(1).strip()
+
+
+def _jpeg_xmp_uint(xml: bytes, key: bytes, *, positive: bool) -> int | None:
+    value = _jpeg_xmp_value(xml, key)
+    if value is None:
+        return None
+    if not value.isdigit() or (positive and int(value) == 0):
+        raise ValueError(f"jpeg: malformed GPano XMP integer {key.decode('ascii')}")
+    return int(value)
+
+
+def _jpeg_gpano(body: bytes) -> dict[str, int] | None:
+    if not body.startswith(_JPEG_XMP_IDENTIFIER):
+        return None
+    xml = body[len(_JPEG_XMP_IDENTIFIER) :]
+    projection = _jpeg_xmp_value(xml, b"GPano:ProjectionType")
+    if projection is None:
+        return None
+    if projection != b"equirectangular":
+        raise ValueError(
+            f"jpeg: unsupported GPano ProjectionType {projection.decode('ascii', 'replace')!r}"
+        )
+    fields = {
+        "projection_canvas_width": _jpeg_xmp_uint(xml, b"GPano:FullPanoWidthPixels", positive=True),
+        "projection_canvas_height": _jpeg_xmp_uint(
+            xml, b"GPano:FullPanoHeightPixels", positive=True
+        ),
+        "cropped_width": _jpeg_xmp_uint(xml, b"GPano:CroppedAreaImageWidthPixels", positive=True),
+        "cropped_height": _jpeg_xmp_uint(xml, b"GPano:CroppedAreaImageHeightPixels", positive=True),
+        "projection_crop_left": _jpeg_xmp_uint(xml, b"GPano:CroppedAreaLeftPixels", positive=False),
+        "projection_crop_top": _jpeg_xmp_uint(xml, b"GPano:CroppedAreaTopPixels", positive=False),
+    }
+    return {key: value for key, value in fields.items() if value is not None}
+
+
+def _validated_gpano_metadata(
+    gpano: dict[str, int] | None,
+    *,
+    width: int,
+    height: int,
+) -> dict[str, int | str | bool]:
+    if gpano is None:
+        return {}
+    if gpano.get("cropped_width", width) != width or gpano.get("cropped_height", height) != height:
+        raise ValueError("jpeg: GPano cropped dimensions disagree with JPEG dimensions")
+    canvas_width = gpano.get("projection_canvas_width", width)
+    canvas_height = gpano.get("projection_canvas_height", height)
+    left = gpano.get("projection_crop_left", 0)
+    top = gpano.get("projection_crop_top", 0)
+    if (
+        left > canvas_width
+        or width > canvas_width - left
+        or top > canvas_height
+        or height > canvas_height - top
+    ):
+        raise ValueError("jpeg: raster crop exceeds the equirectangular canvas")
+    return {
+        "projection": "equirectangular",
+        "projection_canvas_width": canvas_width,
+        "projection_canvas_height": canvas_height,
+        "projection_crop_left": left,
+        "projection_crop_top": top,
+        "is_full_sphere": (
+            left == 0 and top == 0 and canvas_width == width and canvas_height == height
+        ),
+    }
 
 
 def inspect_jpeg(path: Path, payload_kind: str) -> Inspection:
@@ -218,6 +290,7 @@ def inspect_jpeg(path: Path, payload_kind: str) -> Inspection:
         if _exact(stream, 2, "JPEG SOI") != b"\xff\xd8":
             raise ValueError("jpeg: bad signature")
         image_info = None
+        gpano = None
         while True:
             value = _exact(stream, 1, "JPEG marker")[0]
             while value != 0xFF:
@@ -229,9 +302,7 @@ def inspect_jpeg(path: Path, payload_kind: str) -> Inspection:
                 raise ValueError("jpeg: reached EOI before a scan")
             if marker in {0xD8, 0x01} or 0xD0 <= marker <= 0xD7:
                 continue
-            length = struct.unpack(
-                ">H", _exact(stream, 2, "JPEG segment length")
-            )[0]
+            length = struct.unpack(">H", _exact(stream, 2, "JPEG segment length"))[0]
             if length < 2:
                 raise ValueError("jpeg: invalid segment length")
             if marker in _JPEG_SOF:
@@ -240,17 +311,11 @@ def inspect_jpeg(path: Path, payload_kind: str) -> Inspection:
                 body = _exact(stream, length - 2, "JPEG SOF")
                 if len(body) < 6:
                     raise ValueError("jpeg: truncated SOF")
-                precision, height, width, components = struct.unpack(
-                    ">BHHB", body[:6]
-                )
+                precision, height, width, components = struct.unpack(">BHHB", body[:6])
                 if precision != 8 or components not in {1, 3, 4}:
-                    raise ValueError(
-                        "jpeg: unsupported precision or component count"
-                    )
+                    raise ValueError("jpeg: unsupported precision or component count")
                 if len(body) != 6 + 3 * components:
-                    raise ValueError(
-                        "jpeg: SOF length does not match component count"
-                    )
+                    raise ValueError("jpeg: SOF length does not match component count")
                 channels = 1 if components == 1 else 3
                 image_info = (
                     height,
@@ -261,9 +326,14 @@ def inspect_jpeg(path: Path, payload_kind: str) -> Inspection:
                 )
                 continue
             if marker in _JPEG_ALL_SOF:
-                raise ValueError(
-                    f"jpeg: unsupported SOF marker 0x{marker:02x}"
-                )
+                raise ValueError(f"jpeg: unsupported SOF marker 0x{marker:02x}")
+            if marker == 0xE1:
+                candidate = _jpeg_gpano(_exact(stream, length - 2, "JPEG APP1"))
+                if candidate is not None:
+                    if gpano is not None:
+                        raise ValueError("jpeg: duplicate GPano projection metadata")
+                    gpano = candidate
+                continue
             stream.seek(length - 2, 1)
             if marker == 0xDA:
                 if stream.tell() > file_size:
@@ -281,6 +351,11 @@ def inspect_jpeg(path: Path, payload_kind: str) -> Inspection:
                     "uint8",
                     precision=precision,
                     progressive=progressive,
+                    **_validated_gpano_metadata(
+                        gpano,
+                        width=width,
+                        height=height,
+                    ),
                 )
 
 
@@ -394,9 +469,7 @@ def inspect_exr(path: Path, payload_kind: str) -> Inspection:
         if (version & 0xFF) != 2:
             raise ValueError("exr: unsupported version")
         if version & (0x200 | 0x800 | 0x1000):
-            raise ValueError(
-                "exr: tiled, deep, and multipart images are unsupported"
-            )
+            raise ValueError("exr: tiled, deep, and multipart images are unsupported")
         data_window = None
         channel_names = []
         channel_name_encodings = []
@@ -404,14 +477,8 @@ def inspect_exr(path: Path, payload_kind: str) -> Inspection:
         channels_seen = False
         while name := _cstr(stream, "EXR attribute name"):
             attr_type = _cstr(stream, "EXR attribute type")
-            attr_size = struct.unpack(
-                "<I", _exact(stream, 4, "EXR attribute size")
-            )[0]
-            if (
-                name == b"dataWindow"
-                and attr_type == b"box2i"
-                and attr_size == 16
-            ):
+            attr_size = struct.unpack("<I", _exact(stream, 4, "EXR attribute size"))[0]
+            if name == b"dataWindow" and attr_type == b"box2i" and attr_size == 16:
                 value = _exact(stream, attr_size, "EXR dataWindow attribute")
                 data_window = struct.unpack("<4i", value)
             elif name == b"channels" and attr_type == b"chlist":
@@ -436,20 +503,12 @@ def inspect_exr(path: Path, payload_kind: str) -> Inspection:
                         channel_name_encoding = "utf8"
                     channel_names.append(channel_name)
                     channel_name_encodings.append(channel_name_encoding)
-                    channel_types.append(
-                        struct.unpack_from("<i", value, end + 1)[0]
-                    )
+                    channel_types.append(struct.unpack_from("<i", value, end + 1)[0])
                     if len(channel_names) > 4:
                         raise ValueError("exr: unsupported channel set")
                     offset = end + 17
-                if (
-                    offset >= len(value)
-                    or value[offset] != 0
-                    or offset + 1 != len(value)
-                ):
-                    raise ValueError(
-                        "exr: malformed channel list terminator"
-                    )
+                if offset >= len(value) or value[offset] != 0 or offset + 1 != len(value):
+                    raise ValueError("exr: malformed channel list terminator")
             else:
                 remaining = file_size - stream.tell()
                 if attr_size > remaining:
@@ -481,8 +540,7 @@ def inspect_exr(path: Path, payload_kind: str) -> Inspection:
         channel_names=tuple(channel_names),
         channel_name_encodings=tuple(channel_name_encodings),
         channel_dtypes=tuple(
-            "float16" if pixel_type == 1 else "float32"
-            for pixel_type in channel_types
+            "float16" if pixel_type == 1 else "float32" for pixel_type in channel_types
         ),
     )
 
@@ -502,9 +560,7 @@ def inspect_webp(path: Path, payload_kind: str) -> Inspection:
         while stream.tell() < riff_size:
             if riff_size - stream.tell() < 8:
                 raise ValueError("webp: truncated chunk header")
-            kind, length = struct.unpack(
-                "<4sI", _exact(stream, 8, "WebP chunk header")
-            )
+            kind, length = struct.unpack("<4sI", _exact(stream, 8, "WebP chunk header"))
             padded = length + (length & 1)
             if padded > riff_size - stream.tell():
                 raise ValueError("webp: chunk runs past RIFF boundary")
@@ -533,12 +589,7 @@ def inspect_webp(path: Path, payload_kind: str) -> Inspection:
                 if prefix[4] & 0xE0:
                     raise ValueError("webp: unsupported VP8L version")
                 width = 1 + prefix[1] + ((prefix[2] & 0x3F) << 8)
-                height = (
-                    1
-                    + (prefix[2] >> 6)
-                    + (prefix[3] << 2)
-                    + ((prefix[4] & 0xF) << 10)
-                )
+                height = 1 + (prefix[2] >> 6) + (prefix[3] << 2) + ((prefix[4] & 0xF) << 10)
                 if bitstream is None:
                     bitstream = (height, width, bool(prefix[4] & 0x10))
                 continue

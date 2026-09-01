@@ -257,8 +257,9 @@ _PROFILES = {
             rules=(
                 "Pixels are top-to-bottom interleaved gray, RGB, or RGBA in their stored dtype.",
                 "color_space, alpha_mode, and maxval describe samples; values are never rescaled or color-converted implicitly.",
+                "projection is unknown or equirectangular; equirectangular images retain their full-canvas dimensions and crop offset without aspect-ratio inference.",
             ),
-            refusal="Color, alpha, or sample-range changes require an explicit caller conversion.",
+            refusal="Color, alpha, sample-range, or projection changes require an explicit caller declaration or conversion.",
         ),
         _profile(
             "image_sequence",
@@ -271,10 +272,11 @@ _PROFILES = {
             rules=(
                 "Packed decoded frames follow image_samples; planar YUV frames preserve declared chroma sampling/siting, range, and matrix metadata.",
                 "Encoded paths retain their codec-owned sample contract until a frame is explicitly decoded.",
+                "One unknown/equirectangular projection contract applies to every frame; full-canvas dimensions and crop offsets are preserved without aspect-ratio inference.",
                 "Timing uses exact signed int64 nanoseconds when present and is never rate-resampled.",
                 "Optional exposure/readout durations remain exact int64 nanoseconds; timestamp_reference and readout direction declare their interpretation without resampling.",
             ),
-            refusal="Frame color/range conversion or timing resampling must be requested outside the record.",
+            refusal="Frame color/range/projection conversion or timing resampling must be requested outside the record.",
         ),
         _profile(
             "binary_mask",

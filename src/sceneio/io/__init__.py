@@ -113,6 +113,114 @@ if TYPE_CHECKING:
     from sceneio._data import RasterCollection
 
 convert_gaussian_conventions = _core.convert_gaussian_conventions
+IMAGE_PROJECTIONS = ("unknown", "equirectangular")
+
+
+def image(
+    pixels: object,
+    *,
+    color_space: str | None = None,
+    alpha_mode: str | None = None,
+    maxval: int | None = None,
+    projection: str = "unknown",
+    projection_canvas_width: int | None = None,
+    projection_canvas_height: int | None = None,
+    projection_crop_left: int | None = None,
+    projection_crop_top: int | None = None,
+) -> _core.Image:
+    """Build the canonical still-image record."""
+
+    from sceneio._spherical import image as build_image
+
+    return build_image(
+        pixels,
+        color_space=color_space,
+        alpha_mode=alpha_mode,
+        maxval=maxval,
+        projection=projection,
+        projection_canvas_width=projection_canvas_width,
+        projection_canvas_height=projection_canvas_height,
+        projection_crop_left=projection_crop_left,
+        projection_crop_top=projection_crop_top,
+    )
+
+
+def as_equirectangular(
+    value: _core.Image | _core.ImageSequence,
+    *,
+    canvas_width: int | None = None,
+    canvas_height: int | None = None,
+    crop_left: int | None = None,
+    crop_top: int | None = None,
+) -> _core.Image | _core.ImageSequence:
+    """Declare an existing image or sequence's equirectangular geometry."""
+
+    from sceneio._spherical import as_equirectangular as declare
+
+    return declare(
+        value,
+        canvas_width=canvas_width,
+        canvas_height=canvas_height,
+        crop_left=crop_left,
+        crop_top=crop_top,
+    )
+
+
+def spherical_pixels_to_rays(
+    spherical_xy: object,
+    spherical_width: object,
+    spherical_height: object,
+) -> np.ndarray:
+    """Map equirectangular pixels to COLMAP-convention camera rays."""
+
+    from sceneio._spherical import spherical_pixels_to_rays as convert
+
+    return convert(spherical_xy, spherical_width, spherical_height)
+
+
+def rays_to_spherical_pixels(
+    rays: object,
+    spherical_width: object,
+    spherical_height: object,
+) -> np.ndarray:
+    """Project camera rays onto an equirectangular canvas."""
+
+    from sceneio._spherical import rays_to_spherical_pixels as convert
+
+    return convert(rays, spherical_width, spherical_height)
+
+
+def equirectangular_pixels_to_rays(
+    value: _core.Image | _core.ImageSequence,
+    image_xy: object,
+) -> np.ndarray:
+    """Map crop-local image pixels to camera rays."""
+
+    from sceneio._spherical import equirectangular_pixels_to_rays as convert
+
+    return convert(value, image_xy)
+
+
+def rays_to_equirectangular_pixels(
+    value: _core.Image | _core.ImageSequence,
+    rays: object,
+) -> np.ndarray:
+    """Project camera rays into crop-local image coordinates."""
+
+    from sceneio._spherical import rays_to_equirectangular_pixels as convert
+
+    return convert(value, rays)
+
+
+def equirectangular_camera(
+    image_or_width: _core.Image | _core.ImageSequence | int,
+    height: int | None = None,
+) -> _core.CameraIntrinsics:
+    """Build COLMAP's EQUIRECTANGULAR camera model."""
+
+    from sceneio._spherical import equirectangular_camera as build_camera
+
+    return build_camera(image_or_width, height)
 
 
 def _point_cloud_tracks(value: _core.PointCloud):
@@ -151,37 +259,26 @@ def depth_map(
             f"DepthMap.depth: expected numpy.ndarray, got {type(depth).__name__}"
         )
     if depth.dtype != np.float32:
-        raise ContractViolation(
-            "DepthMap.depth: expected dtype float32, "
-            f"got {depth.dtype.name}"
-        )
+        raise ContractViolation(f"DepthMap.depth: expected dtype float32, got {depth.dtype.name}")
     if depth.ndim != 2:
-        raise ContractViolation(
-            f"DepthMap.depth: expected a 2-D array, got shape {depth.shape}"
-        )
+        raise ContractViolation(f"DepthMap.depth: expected a 2-D array, got shape {depth.shape}")
     if not all(depth.shape):
         raise ContractViolation("DepthMap.depth: dimensions must be positive")
     if valid is not None:
         if not isinstance(valid, np.ndarray):
             raise ContractViolation("DepthMap.valid: expected numpy.ndarray or None")
         if valid.dtype != np.bool_:
-            raise ContractViolation(
-                "DepthMap.valid: expected dtype bool, "
-                f"got {valid.dtype.name}"
-            )
+            raise ContractViolation(f"DepthMap.valid: expected dtype bool, got {valid.dtype.name}")
         if valid.shape != depth.shape:
             raise ContractViolation(
-                "DepthMap.valid: expected shape matching depth, "
-                f"got {valid.shape}"
+                f"DepthMap.valid: expected shape matching depth, got {valid.shape}"
             )
     if confidence is not None and (
         not isinstance(confidence, np.ndarray)
         or confidence.dtype != np.float32
         or confidence.shape != depth.shape
     ):
-        raise ContractViolation(
-            "DepthMap.confidence: expected a float32 array matching depth"
-        )
+        raise ContractViolation("DepthMap.confidence: expected a float32 array matching depth")
     if valid is not None:
         semantic_valid = valid
     elif invalid_policy == "zero":
@@ -196,9 +293,7 @@ def depth_map(
         semantic_valid = np.ones(depth.shape, dtype=np.bool_)
     observed = depth[semantic_valid]
     if observed.size and not bool(np.all(np.isfinite(observed))):
-        raise ContractViolation(
-            "DepthMap.depth: valid pixels contain non-finite values (NaN/Inf)"
-        )
+        raise ContractViolation("DepthMap.depth: valid pixels contain non-finite values (NaN/Inf)")
     if observed.size and float(observed.min()) <= 0.0:
         raise ContractViolation("DepthMap.depth: valid pixels must be > 0")
     try:
@@ -253,9 +348,7 @@ def point_cloud(
             f"PointCloud.positions: expected numpy.ndarray, got {type(positions).__name__}"
         )
     if positions.dtype != np.float32 or positions.ndim != 2 or positions.shape[1:] != (3,):
-        raise ContractViolation(
-            "PointCloud.positions: expected dtype float32 and shape (N, 3)"
-        )
+        raise ContractViolation("PointCloud.positions: expected dtype float32 and shape (N, 3)")
     if not positions.flags.c_contiguous:
         raise ContractViolation("PointCloud.positions: expected a C-contiguous array")
 
@@ -269,18 +362,14 @@ def point_cloud(
             return
         expected_dtype = np.dtype(dtype)
         if not isinstance(value, np.ndarray):
-            raise ContractViolation(
-                f"PointCloud.{field}: expected numpy.ndarray or None"
-            )
+            raise ContractViolation(f"PointCloud.{field}: expected numpy.ndarray or None")
         if value.dtype != expected_dtype or value.shape != shape:
             raise ContractViolation(
                 f"PointCloud.{field}: expected dtype {expected_dtype.name} and "
                 f"shape {shape}, got dtype {value.dtype.name} and shape {value.shape}"
             )
         if not value.flags.c_contiguous:
-            raise ContractViolation(
-                f"PointCloud.{field}: expected a C-contiguous array"
-            )
+            raise ContractViolation(f"PointCloud.{field}: expected a C-contiguous array")
 
     count = int(positions.shape[0])
     require_array("colors", colors, np.uint8, (count, 3))
@@ -302,9 +391,7 @@ def point_cloud(
         track_keypoint_indices is not None,
     )
     if tracks is not None and any(supplied_csr):
-        raise ContractViolation(
-            "PointCloud: tracks and track CSR columns are mutually exclusive"
-        )
+        raise ContractViolation("PointCloud: tracks and track CSR columns are mutually exclusive")
     if any(supplied_csr) and not all(supplied_csr):
         raise ContractViolation(
             "PointCloud: track_offsets, track_image_ids, and "
@@ -324,8 +411,7 @@ def point_cloud(
         for point_index, track in enumerate(tracks):
             if isinstance(track, str | bytes) or not isinstance(track, Sequence):
                 raise ContractViolation(
-                    f"PointCloud.tracks[{point_index}]: expected a sequence of "
-                    "TrackObservation"
+                    f"PointCloud.tracks[{point_index}]: expected a sequence of TrackObservation"
                 )
             for observation in track:
                 if not isinstance(observation, _TrackObservation):
@@ -359,9 +445,7 @@ def point_cloud(
             raise ContractViolation(
                 "PointCloud.track_keypoint_indices: expected a C-contiguous uint64 vector"
             )
-        if isinstance(track_image_ids, str | bytes) or not isinstance(
-            track_image_ids, Sequence
-        ):
+        if isinstance(track_image_ids, str | bytes) or not isinstance(track_image_ids, Sequence):
             raise ContractViolation(
                 "PointCloud.track_image_ids: expected a sequence of image identities"
             )
@@ -466,23 +550,18 @@ def feature_set(
 
     if not isinstance(keypoints, np.ndarray):
         raise ContractViolation(
-            "FeatureSet.keypoints: expected numpy.ndarray, "
-            f"got {type(keypoints).__name__}"
+            f"FeatureSet.keypoints: expected numpy.ndarray, got {type(keypoints).__name__}"
         )
     if keypoints.dtype != np.float32:
         raise ContractViolation(
-            "FeatureSet.keypoints: expected dtype float32, "
-            f"got {keypoints.dtype.name}"
+            f"FeatureSet.keypoints: expected dtype float32, got {keypoints.dtype.name}"
         )
     if keypoints.ndim != 2 or keypoints.shape[1] not in (2, 4, 6):
         raise ContractViolation(
-            "FeatureSet.keypoints: expected shape (N, 2|4|6), "
-            f"got {keypoints.shape}"
+            f"FeatureSet.keypoints: expected shape (N, 2|4|6), got {keypoints.shape}"
         )
     if keypoints.size and not bool(np.all(np.isfinite(keypoints))):
-        raise ContractViolation(
-            "FeatureSet.keypoints: array contains non-finite values (NaN/Inf)"
-        )
+        raise ContractViolation("FeatureSet.keypoints: array contains non-finite values (NaN/Inf)")
     if not keypoints.flags.c_contiguous:
         raise ContractViolation("FeatureSet.keypoints: expected a C-contiguous array")
 
@@ -490,8 +569,7 @@ def feature_set(
     if descriptors is not None:
         if not isinstance(descriptors, np.ndarray):
             raise ContractViolation(
-                "FeatureSet.descriptors: expected numpy.ndarray, "
-                f"got {type(descriptors).__name__}"
+                f"FeatureSet.descriptors: expected numpy.ndarray, got {type(descriptors).__name__}"
             )
         supported = {
             np.dtype(np.int8),
@@ -517,32 +595,23 @@ def feature_set(
                 f"keypoints, got {descriptors.shape}"
             )
         if not descriptors.flags.c_contiguous:
-            raise ContractViolation(
-                "FeatureSet.descriptors: expected a C-contiguous array"
-            )
+            raise ContractViolation("FeatureSet.descriptors: expected a C-contiguous array")
         descriptor_array = descriptors
 
     score_array: np.ndarray | None = None
     if scores is not None:
         if not isinstance(scores, np.ndarray):
             raise ContractViolation(
-                "FeatureSet.scores: expected numpy.ndarray, "
-                f"got {type(scores).__name__}"
+                f"FeatureSet.scores: expected numpy.ndarray, got {type(scores).__name__}"
             )
         if scores.dtype != np.float32:
             raise ContractViolation(
-                "FeatureSet.scores: expected dtype float32, "
-                f"got {scores.dtype.name}"
+                f"FeatureSet.scores: expected dtype float32, got {scores.dtype.name}"
             )
         if scores.shape != (keypoints.shape[0],):
-            raise ContractViolation(
-                "FeatureSet.scores: expected shape (N,), "
-                f"got {scores.shape}"
-            )
+            raise ContractViolation(f"FeatureSet.scores: expected shape (N,), got {scores.shape}")
         if scores.size and not bool(np.all(np.isfinite(scores))):
-            raise ContractViolation(
-                "FeatureSet.scores: array contains non-finite values (NaN/Inf)"
-            )
+            raise ContractViolation("FeatureSet.scores: array contains non-finite values (NaN/Inf)")
         if not scores.flags.c_contiguous:
             raise ContractViolation("FeatureSet.scores: expected a C-contiguous array")
         score_array = scores
@@ -580,9 +649,7 @@ def feature_set(
     if extractor_type_name is not None and (
         not isinstance(extractor_type_name, str) or "\x00" in extractor_type_name
     ):
-        raise ContractViolation(
-            "FeatureSet.extractor_type_name: expected text without NUL or None"
-        )
+        raise ContractViolation("FeatureSet.extractor_type_name: expected text without NUL or None")
 
     color_array: np.ndarray | None = None
     if keypoint_colors is not None:
@@ -599,9 +666,7 @@ def feature_set(
                 "FeatureSet.keypoint_colors: expected dtype uint8 and shape (N, 3)"
             )
         if not keypoint_colors.flags.c_contiguous:
-            raise ContractViolation(
-                "FeatureSet.keypoint_colors: expected a C-contiguous array"
-            )
+            raise ContractViolation("FeatureSet.keypoint_colors: expected a C-contiguous array")
         color_array = keypoint_colors
 
     if quality is not None and (
@@ -625,6 +690,7 @@ def feature_set(
         )
     except (TypeError, ValueError) as exc:
         raise ContractViolation(f"FeatureSet: {exc}") from None
+
 
 install_coordinate_properties(
     _core.Reconstruction,
@@ -658,9 +724,7 @@ install_coordinate_properties(
     _core.ColmapDatabase,
 )
 
-_EXACT_COLMAP_DB_PROFILES = frozenset(
-    item["name"] for item in _core._colmap_db_profiles()
-)
+_EXACT_COLMAP_DB_PROFILES = frozenset(item["name"] for item in _core._colmap_db_profiles())
 
 
 def read_e57_scan(
@@ -684,9 +748,7 @@ def read_e57_scan(
     except _FormatError:
         raise
     except Exception as exc:
-        raise _FormatError(
-            f"reading E57 scan {scan_index!r} from {str(path)!r}: {exc}"
-        ) from exc
+        raise _FormatError(f"reading E57 scan {scan_index!r} from {str(path)!r}: {exc}") from exc
 
 
 def read_tiff_collection(
@@ -710,9 +772,7 @@ def read_tiff_collection(
     except _FormatError:
         raise
     except Exception as exc:
-        raise _FormatError(
-            f"reading TIFF collection from {str(path)!r}: {exc}"
-        ) from exc
+        raise _FormatError(f"reading TIFF collection from {str(path)!r}: {exc}") from exc
 
 
 def read(path, *, format: str | None = None):
@@ -741,6 +801,111 @@ def read(path, *, format: str | None = None):
         raise _FormatError(f"reading {str(path)!r} as {fmt!r}: {exc}") from exc
 
 
+def read_equirectangular(
+    path,
+    *,
+    format: str | None = None,
+    canvas_width: int | None = None,
+    canvas_height: int | None = None,
+    crop_left: int | None = None,
+    crop_top: int | None = None,
+) -> _core.Image:
+    """Read a still image and explicitly declare its spherical geometry.
+
+    GPano JPEG metadata is recognized automatically by :func:`read`; this
+    typed adapter covers metadata-free rasters and every other still-image
+    encoding without guessing from a 2:1 aspect ratio.
+    """
+
+    value = read(path, format=format)
+    if not isinstance(value, _core.Image):
+        raise _FormatError("read_equirectangular requires a still-image format returning Image")
+    try:
+        return as_equirectangular(
+            value,
+            canvas_width=canvas_width,
+            canvas_height=canvas_height,
+            crop_left=crop_left,
+            crop_top=crop_top,
+        )
+    except ContractViolation as exc:
+        raise _FormatError(f"reading {str(path)!r} as an equirectangular image: {exc}") from exc
+
+
+def read_image_folder(
+    path,
+    *,
+    frames: tuple[int, int] | None = None,
+    projection: str | None = None,
+    canvas_width: int | None = None,
+    canvas_height: int | None = None,
+    crop_left: int | None = None,
+    crop_top: int | None = None,
+) -> _core.ImageSequence:
+    """Read a flat folder as one lazy, semantically validated image sequence.
+
+    The typed entry point intentionally avoids classifying arbitrary folders in
+    generic :func:`detect`. A manifest or embedded JPEG GPano metadata carries
+    projection automatically; ``projection`` is an explicit declaration for
+    metadata-free folders and is never inferred from aspect ratio.
+    """
+
+    value = (
+        read_partial(path, frames=frames, format="image_sequence")
+        if frames is not None
+        else read(path, format="image_sequence")
+    )
+    if not isinstance(value, _core.ImageSequence):
+        raise _FormatError("image folder reader did not return ImageSequence")
+    geometry_supplied = any(
+        item is not None for item in (canvas_width, canvas_height, crop_left, crop_top)
+    )
+    if projection is None:
+        if geometry_supplied:
+            raise _FormatError("image folder projection geometry requires an explicit projection")
+        return value
+    if value.projection != "unknown":
+        if projection != value.projection:
+            raise _FormatError(
+                f"image folder projection {projection!r} conflicts with the stored "
+                f"{value.projection!r} declaration"
+            )
+        stored_geometry = (
+            value.projection_canvas_width,
+            value.projection_canvas_height,
+            value.projection_crop_left,
+            value.projection_crop_top,
+        )
+        supplied_geometry = (canvas_width, canvas_height, crop_left, crop_top)
+        if any(
+            supplied is not None and supplied != stored
+            for supplied, stored in zip(supplied_geometry, stored_geometry, strict=True)
+        ):
+            raise _FormatError("image folder projection geometry conflicts with stored metadata")
+        return value
+    if projection == "unknown" and not geometry_supplied:
+        return value
+    try:
+        if projection == "equirectangular":
+            return as_equirectangular(
+                value,
+                canvas_width=canvas_width,
+                canvas_height=canvas_height,
+                crop_left=crop_left,
+                crop_top=crop_top,
+            )
+        return _core.image_sequence_with_projection(
+            value,
+            projection,
+            canvas_width,
+            canvas_height,
+            crop_left,
+            crop_top,
+        )
+    except (ContractViolation, TypeError, ValueError, OverflowError) as exc:
+        raise _FormatError(f"reading {str(path)!r} as an image folder: {exc}") from exc
+
+
 def read_scene(
     path,
     *,
@@ -754,9 +919,7 @@ def read_scene(
 
     fmt = detect(path)
     if fmt not in {"usd", "usdz"}:
-        raise _FormatError(
-            f"read_scene supports USD-family paths, not format {fmt!r}"
-        )
+        raise _FormatError(f"read_scene supports USD-family paths, not format {fmt!r}")
     try:
         return _read_usd_scene(
             path,
@@ -769,9 +932,7 @@ def read_scene(
     except _FormatError:
         raise
     except Exception as exc:
-        raise _FormatError(
-            f"reading {str(path)!r} as a rich USD scene: {exc}"
-        ) from exc
+        raise _FormatError(f"reading {str(path)!r} as a rich USD scene: {exc}") from exc
 
 
 def inspect(path, *, format: str | None = None) -> _Inspection:
@@ -844,9 +1005,7 @@ def read_partial(
         )
     )
     if selected != 1:
-        raise ValueError(
-            "read_partial requires exactly one selector family"
-        )
+        raise ValueError("read_partial requires exactly one selector family")
     fmt = format or detect(path)
     codec = get(fmt)
     if window is not None:
@@ -869,9 +1028,7 @@ def read_partial(
         if selected_mesh < 0:
             raise ValueError("mesh_id must be non-negative")
         if codec.read_mesh is None:
-            raise _FormatError(
-                f"format {fmt!r} does not support mesh-subset reads"
-            )
+            raise _FormatError(f"format {fmt!r} does not support mesh-subset reads")
         operation = codec.read_mesh
         values = (selected_mesh,)
     elif primitive_id is not None:
@@ -879,24 +1036,18 @@ def read_partial(
         if selected_primitive < 0:
             raise ValueError("primitive_id must be non-negative")
         if codec.read_primitive is None:
-            raise _FormatError(
-                f"format {fmt!r} does not support primitive-subset reads"
-            )
+            raise _FormatError(f"format {fmt!r} does not support primitive-subset reads")
         operation = codec.read_primitive
         values = (selected_primitive,)
     elif states is not None:
         values = _selector_ints(states, 2, "states")
         if codec.read_states is None:
-            raise _FormatError(
-                f"format {fmt!r} does not support state-subset reads"
-            )
+            raise _FormatError(f"format {fmt!r} does not support state-subset reads")
         operation = codec.read_states
     elif frames is not None:
         values = _selector_ints(frames, 2, "frames")
         if codec.read_frames is None:
-            raise _FormatError(
-                f"format {fmt!r} does not support frame-subset reads"
-            )
+            raise _FormatError(f"format {fmt!r} does not support frame-subset reads")
         operation = codec.read_frames
     elif image_id is not None:
         selected_image = _selector_int(image_id, "image_id")
@@ -908,37 +1059,24 @@ def read_partial(
         values = (selected_image,)
     elif pair is not None:
         image_a, image_b = _selector_ints(pair, 2, "pair")
-        if (
-            image_a < 0
-            or image_a >= 2_147_483_647
-            or image_b < 0
-            or image_b >= 2_147_483_647
-        ):
-            raise ValueError(
-                "pair image ids must be in 0..2147483646"
-            )
+        if image_a < 0 or image_a >= 2_147_483_647 or image_b < 0 or image_b >= 2_147_483_647:
+            raise ValueError("pair image ids must be in 0..2147483646")
         if image_a == image_b:
             raise ValueError("pair image ids must be distinct")
         if codec.read_pair is None:
-            raise _FormatError(
-                f"format {fmt!r} does not support image-pair reads"
-            )
+            raise _FormatError(f"format {fmt!r} does not support image-pair reads")
         operation = codec.read_pair
         values = (image_a, image_b)
     elif tensors is not None:
         selected_tensors = _tensor_names(tensors)
         if codec.read_tensors is None:
-            raise _FormatError(
-                f"format {fmt!r} does not support named-tensor reads"
-            )
+            raise _FormatError(f"format {fmt!r} does not support named-tensor reads")
         operation = codec.read_tensors
         values = (selected_tensors,)
     else:
         selected_slices = _tensor_slices(slices)
         if codec.read_slices is None:
-            raise _FormatError(
-                f"format {fmt!r} does not support tensor-slice reads"
-            )
+            raise _FormatError(f"format {fmt!r} does not support tensor-slice reads")
         operation = codec.read_slices
         values = (selected_slices,)
     try:
@@ -946,9 +1084,7 @@ def read_partial(
     except _FormatError:
         raise
     except Exception as exc:
-        raise _FormatError(
-            f"partially reading {str(path)!r} as {fmt!r}: {exc}"
-        ) from exc
+        raise _FormatError(f"partially reading {str(path)!r} as {fmt!r}: {exc}") from exc
 
 
 def _selector_int(value, name: str) -> int:
@@ -978,9 +1114,7 @@ def _tensor_names(value) -> tuple[str, ...]:
     try:
         names = tuple(value)
     except TypeError:
-        raise TypeError(
-            "tensors must be a non-empty iterable of names"
-        ) from None
+        raise TypeError("tensors must be a non-empty iterable of names") from None
     if not names:
         raise ValueError("tensors must contain at least one name")
     if any(not isinstance(name, str) for name in names):
@@ -992,9 +1126,7 @@ def _tensor_names(value) -> tuple[str, ...]:
 
 def _tensor_slices(value) -> tuple[tuple[str, int, int], ...]:
     if not isinstance(value, Mapping):
-        raise TypeError(
-            "slices must be a non-empty mapping of tensor names to ranges"
-        )
+        raise TypeError("slices must be a non-empty mapping of tensor names to ranges")
     if not value:
         raise ValueError("slices must contain at least one tensor")
     result = []
@@ -1003,9 +1135,7 @@ def _tensor_slices(value) -> tuple[tuple[str, int, int], ...]:
             raise TypeError("tensor slice names must be strings")
         start, stop = _selector_ints(bounds, 2, f"slice for {name!r}")
         if start < 0 or start >= stop:
-            raise ValueError(
-                f"slice for {name!r} must satisfy 0 <= start < stop"
-            )
+            raise ValueError(f"slice for {name!r} must satisfy 0 <= start < stop")
         result.append((name, start, stop))
     return tuple(result)
 
@@ -1018,9 +1148,7 @@ def colmap_database_conversion_report(
     """Analyze an exact COLMAP database target without opening a path."""
 
     if profile not in _EXACT_COLMAP_DB_PROFILES:
-        raise ValueError(
-            f"COLMAP database writer: unknown target profile {profile!r}"
-        )
+        raise ValueError(f"COLMAP database writer: unknown target profile {profile!r}")
     raw = _core._colmap_db_conversion_report(database, profile)
     changes = raw["identity_changes"]
     order = ("profile", "application_id", "user_version")
@@ -1029,9 +1157,7 @@ def colmap_database_conversion_report(
         target_profile=raw["target_profile"],
         writable=raw["writable"],
         identity_changes=tuple(
-            (name, changes[name][0], changes[name][1])
-            for name in order
-            if name in changes
+            (name, changes[name][0], changes[name][1]) for name in order if name in changes
         ),
         incompatibilities=tuple(raw["incompatibilities"]),
     )
@@ -1047,14 +1173,60 @@ def write_colmap_db(
 
     try:
         if profile not in _EXACT_COLMAP_DB_PROFILES:
-            raise ValueError(
-                f"COLMAP database writer: unknown target profile {profile!r}"
-            )
+            raise ValueError(f"COLMAP database writer: unknown target profile {profile!r}")
         _core.write_colmap_db(database, str(path), profile=profile)
     except Exception as exc:
         raise _FormatError(
             f"writing {str(path)!r} as colmap_db profile {profile!r}: {exc}"
         ) from exc
+
+
+def write_image_folder(
+    value: _core.ImageSequence,
+    path,
+    *,
+    frame_format: str | None = None,
+) -> None:
+    """Write an image folder transactionally.
+
+    Lazy encoded-path sequences are copied byte-for-byte when ``frame_format``
+    is omitted. Packed sequences require an explicit single-frame ``Image``
+    codec and are encoded one frame at a time with bounded live memory.
+    """
+
+    from sceneio.io import _image_sequence as adapter
+    from sceneio.io.registry import _IMAGE_FRAME_ACCESS
+
+    if not isinstance(value, _core.ImageSequence):
+        raise _FormatError("write_image_folder requires ImageSequence")
+    extension = None
+    encode_frame = None
+    if frame_format is not None:
+        codec = get(frame_format)
+        if codec.record is not _core.Image or codec.payload_kind != "image":
+            raise _FormatError(f"frame format {frame_format!r} does not encode one canonical Image")
+        if codec.write is None:
+            raise _FormatError(f"frame format {frame_format!r} is read-only")
+        if not codec.extensions:
+            raise _FormatError(f"frame format {frame_format!r} has no canonical file extension")
+        extension = ".pnm" if frame_format == "netpbm" else codec.extensions[0]
+        writer = codec.write
+
+        def encode_frame(image_value: _core.Image, target: Path) -> None:
+            writer(image_value, str(target))
+
+    try:
+        adapter._write_image_sequence_directory(
+            _IMAGE_FRAME_ACCESS,
+            value,
+            str(path),
+            frame_extension=extension,
+            encode_frame=encode_frame,
+        )
+    except _FormatError:
+        raise
+    except Exception as exc:
+        raise _FormatError(f"writing {str(path)!r} as an image folder: {exc}") from exc
 
 
 def write(
@@ -1073,26 +1245,38 @@ def write(
     not truncate an existing destination. ``profile`` selects an exact
     COLMAP SQLite schema or one of the WebM ``vp8-keyframe``,
     ``vp8-temporal``, and ``vp9-temporal`` encoders. Omitting it preserves an
-    exact profile carried by a decoded database and keeps WebM's compatible
-    independent-frame VP8 default.
+    exact profile carried by a decoded database, keeps WebM's compatible
+    independent-frame VP8 default, and keeps IVF's VP9 default.
     """
     fmt = format or _detect_write(obj, path)
     codec = get(fmt)
     if codec.write is None:
         raise _FormatError(f"format {fmt!r} is read-only (no writer)")
-    if profile is not None and fmt not in {"colmap_db", "webm"}:
-        raise _FormatError(
-            "profile is supported only when writing format 'colmap_db' "
-            "or 'webm'"
-        )
     if (
-        profile is not None
-        and fmt == "colmap_db"
-        and profile not in _EXACT_COLMAP_DB_PROFILES
+        isinstance(obj, _core.Image)
+        and obj.projection != "unknown"
+        and "equirectangular_xmp" not in codec.supported_features
     ):
         raise _FormatError(
-            f"COLMAP database writer: unknown target profile {profile!r}"
+            f"format {fmt!r} cannot preserve Image.projection; write JPEG "
+            "with GPano XMP or explicitly remove the projection interpretation"
         )
+    if (
+        isinstance(obj, _core.ImageSequence)
+        and obj.projection != "unknown"
+        and "equirectangular_manifest" not in codec.supported_features
+    ):
+        raise _FormatError(
+            f"format {fmt!r} cannot preserve ImageSequence.projection; "
+            "write an image folder manifest or explicitly remove the projection"
+        )
+    if profile is not None and fmt not in {"colmap_db", "webm", "ivf"}:
+        raise _FormatError(
+            "profile is supported only when writing format 'colmap_db' "
+            "or video format 'webm' or 'ivf'"
+        )
+    if profile is not None and fmt == "colmap_db" and profile not in _EXACT_COLMAP_DB_PROFILES:
+        raise _FormatError(f"COLMAP database writer: unknown target profile {profile!r}")
     try:
         selected_profile = profile
         if (
@@ -1132,9 +1316,7 @@ def write_scene(
     except _FormatError:
         raise
     except Exception as exc:
-        raise _FormatError(
-            f"writing {str(path)!r} as a rich USD scene: {exc}"
-        ) from exc
+        raise _FormatError(f"writing {str(path)!r} as a rich USD scene: {exc}") from exc
 
 
 def codecs() -> dict[str, _Codec]:
@@ -1193,20 +1375,14 @@ def _detect_write(obj, path) -> str:
         for c in REGISTRY.values()
         if c.write is not None
         and (
-            (
-                longest_extension
-                and extension_matches.get(c.id) == longest_extension
-            )
+            (longest_extension and extension_matches.get(c.id) == longest_extension)
             or name in c.filenames
             or (c.is_directory and Path(path).suffix == "")
         )
     ]
     if not cands:
         ext = Path(path).suffix.lower()
-        raise _FormatError(
-            f"no writer for {type(obj).__name__} at {str(path)!r} "
-            f"(ext {ext!r})"
-        )
+        raise _FormatError(f"no writer for {type(obj).__name__} at {str(path)!r} (ext {ext!r})")
     if len(cands) > 1:
         for c in cands:
             if c.record is type(obj):
@@ -1217,9 +1393,11 @@ def _detect_write(obj, path) -> str:
 __all__ = [
     "COLMAP_COORDINATES",
     "IMAGE_COORDINATES",
+    "IMAGE_PROJECTIONS",
     "LABEL_MAP_SCHEMA",
     "UNKNOWN_COORDINATES",
     "UNSPECIFIED_FORMAT_COORDINATES",
+    "as_equirectangular",
     "camera_intrinsics",
     "capabilities",
     "codecs",
@@ -1230,7 +1408,10 @@ __all__ = [
     "coordinate_convention",
     "depth_map",
     "detect",
+    "equirectangular_camera",
+    "equirectangular_pixels_to_rays",
     "feature_set",
+    "image",
     "inspect",
     "inspect_depth",
     "inspect_label_map",
@@ -1238,10 +1419,14 @@ __all__ = [
     "native_features",
     "point_cloud",
     "project_ncore_item",
+    "rays_to_equirectangular_pixels",
+    "rays_to_spherical_pixels",
     "read",
     "read_depth",
     "read_e57_scan",
+    "read_equirectangular",
     "read_euroc_dataset",
+    "read_image_folder",
     "read_label_map",
     "read_ncore_component",
     "read_ncore_semantic_component",
@@ -1249,11 +1434,13 @@ __all__ = [
     "read_scene",
     "read_tiff_collection",
     "register",
+    "spherical_pixels_to_rays",
     "write",
     "write_arrow_ipc",
     "write_colmap_db",
     "write_depth",
     "write_euroc_dataset",
+    "write_image_folder",
     "write_label_map",
     "write_ncore_v4",
     "write_openvdb",

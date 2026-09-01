@@ -2,7 +2,7 @@
 
 Measures, per codec, encode (write) + decode (read) throughput (MB/s over the raw
 payload) and peak Python allocation (tracemalloc), for sceneio._core vs the oracle
-library where one exists, on representative payloads for all 74 codecs. Read
+library where one exists, on representative payloads for all 77 codecs. Read
 measurements retain the whole-file bytes/copy-decode baseline beside the
 public registry mmap path, so their peak delta captures the input copy O1
 removes and, for NPY, the decoded-array copy O2 removes. Write measurements
@@ -810,6 +810,17 @@ def _directory_specs(reconstruction, scale, root):
             ),
             None,
             lambda path: sceneio.read(path, format="rtmv"),
+            lambda record, payload: payload,
+        ),
+        DirectorySpec(
+            "mp4",
+            partial(
+                sequence_fixtures._mp4_path_fixture,
+                root,
+                scale,
+            ),
+            None,
+            _core.read_mp4,
             lambda record, payload: payload,
         ),
         DirectorySpec(
@@ -3055,7 +3066,7 @@ def _run_benchmark(args, tmp):
                 path = Path(tmp) / spec.id
                 path.mkdir()
                 spec.w(value, str(path))
-            file_bytes = _directory_size(path)
+            file_bytes = _stored_size(path)
             payload_bytes = spec.nbytes(value, payload)
             pmb = payload_bytes / 1e6
             fmb = file_bytes / 1e6
@@ -3083,9 +3094,7 @@ def _run_benchmark(args, tmp):
 
             def _directory_read(path=path, codec_id=spec.id, path_read=spec.path_read):
                 if args.cold_cache:
-                    for entry in path.rglob("*"):
-                        if entry.is_file():
-                            _evict_file_cache(entry)
+                    _evict_file_cache(path)
                 if path_read is not None:
                     return path_read(path)
                 return sceneio.read(path, format=codec_id)
@@ -3096,9 +3105,7 @@ def _run_benchmark(args, tmp):
 
             def _directory_inspect(path=path, codec_id=spec.id):
                 if args.cold_cache:
-                    for entry in path.rglob("*"):
-                        if entry.is_file():
-                            _evict_file_cache(entry)
+                    _evict_file_cache(path)
                 return sceneio.inspect(path, format=codec_id)
 
             inspect_time, inspect_peak = _measure(
@@ -3133,9 +3140,7 @@ def _run_benchmark(args, tmp):
                     partial=spec.partial,
                 ):
                     if args.cold_cache:
-                        for entry in path.iterdir():
-                            if entry.is_file():
-                                _evict_file_cache(entry)
+                        _evict_file_cache(path)
                     if partial is not None:
                         return partial(path)
                     return sceneio.read_partial(

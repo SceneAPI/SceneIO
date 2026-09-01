@@ -137,6 +137,55 @@ def test_metadata_recording():
     assert _core.image(rgba, alpha_mode="premultiplied").alpha_mode == "premultiplied"
 
 
+def test_equirectangular_projection_metadata_is_canonical():
+    pixels = np.zeros((4, 8, 3), np.uint8)
+    ordinary = _core.image(pixels)
+    assert ordinary.projection == "unknown"
+    assert ordinary.projection_canvas_width == 0
+    assert ordinary.projection_canvas_height == 0
+    assert ordinary.projection_crop_left == 0
+    assert ordinary.projection_crop_top == 0
+    assert not ordinary.is_full_sphere
+
+    full = _core.image(pixels, projection="equirectangular")
+    assert full.projection == "equirectangular"
+    assert full.projection_canvas_width == 8
+    assert full.projection_canvas_height == 4
+    assert full.projection_crop_left == 0
+    assert full.projection_crop_top == 0
+    assert full.is_full_sphere
+
+    crop = _core.image(
+        np.zeros((2, 3, 3), np.uint8),
+        projection="equirectangular",
+        projection_canvas_width=8,
+        projection_canvas_height=4,
+        projection_crop_left=3,
+        projection_crop_top=1,
+    )
+    assert crop.projection_canvas_width == 8
+    assert crop.projection_canvas_height == 4
+    assert crop.projection_crop_left == 3
+    assert crop.projection_crop_top == 1
+    assert not crop.is_full_sphere
+
+
+def test_equirectangular_projection_validation_is_fail_closed():
+    pixels = np.zeros((2, 3, 3), np.uint8)
+    with pytest.raises(ValueError, match="projection must be"):
+        _core.image(pixels, projection="cubemap")
+    with pytest.raises(ValueError, match="requires projection"):
+        _core.image(pixels, projection_canvas_width=8)
+    with pytest.raises(ValueError, match="crop exceeds"):
+        _core.image(
+            pixels,
+            projection="equirectangular",
+            projection_canvas_width=4,
+            projection_canvas_height=3,
+            projection_crop_left=2,
+        )
+
+
 def test_validation_errors():
     # match= pins each error to the check that must raise it (a mis-routed
     # generic message would otherwise satisfy a bare pytest.raises).

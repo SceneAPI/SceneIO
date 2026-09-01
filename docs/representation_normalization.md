@@ -32,6 +32,7 @@ import sceneio
 image_contract = sceneio.representation_contract(sceneio.Image)
 assert image_contract.profile.id == "image_samples"
 assert image_contract.normalization == "preserve"
+assert "projection is unknown or equirectangular" in image_contract.rules[2]
 
 cloud_contract = sceneio.representation_contract("sceneio.PointCloud")
 assert cloud_contract.scale_fields == (
@@ -137,6 +138,8 @@ contract; `normalized` and `arbitrary` do not.
 - `ImageSequence` acquisition metadata uses exact nanosecond durations. A
   declared timestamp reference and readout direction make rolling exposure
   timing interpretable; unsupported writers refuse it rather than dropping it.
+  The same unknown/equirectangular full-canvas and crop contract applies to
+  every frame; heterogeneous projection geometry requires separate records.
 - `RasterLevel` preserves one native-endian, contiguous image, mask, or
   grayscale stack with explicit axes and sample dtype. `RasterSeries` binds
   homogeneous levels into a decreasing spatial pyramid, and
@@ -233,7 +236,7 @@ checks profile vocabulary, immutable lookup behavior, live evidence paths,
 short-name lookup, the exact three direct-conversion records, narrow metric
 claims, consolidated record ownership, and Gaussian refusal boundaries.
 
-Format-specific decode/encode normalization remains governed by the 74-row
+Format-specific decode/encode normalization remains governed by the 77-row
 oracle ledger in
 [`tests/contracts/coordinate_conversions_v1.toml`](../tests/contracts/coordinate_conversions_v1.toml)
 and the independent I/O ledger in

@@ -1,7 +1,7 @@
 # SceneIO — comprehensive coverage roadmap & execution checklist
 
 > Current shipped and branch-local status is tracked in `format_coverage.md`.
-> The status markers below have been reconciled to the live 74-format registry;
+> The status markers below have been reconciled to the live 77-format registry;
 > broader checklist boxes remain open only for aspirational or optional future
 > gates; they are not missing SceneIO 0.4.0 release requirements. The completed
 > format-expansion execution record is
@@ -21,7 +21,7 @@
 > The bounded standards-based USD expansion is specified separately in
 > [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 > Coordinate-system closure is implemented independently of future
-> aspirational gates. All 74 built-ins are classified by the checked
+> aspirational gates. All 77 built-ins are classified by the checked
 > manifest described in
 > [`coordinate_conventions.md`](coordinate_conventions.md); COLMAP is the
 > canonical explicit-conversion target, never an implicit label for unknown
@@ -33,7 +33,7 @@
 > rules. It changes no decoded values and keeps unknown/arbitrary scale honest.
 > Licensed fixture sourcing is tracked separately in
 > [`public_fixture_corpus.md`](public_fixture_corpus.md). Its machine contract
-> maps all 74 built-ins to 13 direct upstream formats and 61 deterministic
+> maps all 77 built-ins to 13 direct upstream formats and 64 deterministic
 > oracle-derived formats without introducing network-dependent CI.
 > The 2026-08-02 cross-platform correction changes no roadmap scope or format
 > capability. Local MSVC and clean Linux focused checks pass; the exact local

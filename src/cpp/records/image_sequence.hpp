@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "io/common.hpp"
+#include "records/image_projection.hpp"
 
 struct ImageSequence {
     size_t n = 0;
@@ -65,6 +66,10 @@ struct ImageSequence {
     uint32_t pixel_aspect_numerator = 0;
     uint32_t pixel_aspect_denominator = 0;
 
+    // One interpretation applies to every frame. Heterogeneous projection
+    // geometry requires separate ImageSequence records.
+    ImageProjectionMetadata projection_metadata;
+
     // Animation repetition is absent for generic sequences. When present,
     // zero means repeat indefinitely, matching APNG and animated WebP.
     bool loop_count_present = false;
@@ -88,6 +93,9 @@ struct ImageSequence {
     bool has_paths() const { return storage_mode == "encoded_paths"; }
     bool has_pixels() const { return storage_mode == "packed"; }
     bool has_chroma() const { return !u.empty(); }
+    bool is_full_sphere() const {
+        return projection_metadata.is_full_sphere(width, height);
+    }
 };
 
 std::vector<std::string> image_sequence_paths(
@@ -103,6 +111,17 @@ void assign_image_sequence_names(
 void validate_image_sequence(
     const ImageSequence &sequence,
     const char *context = "image sequence");
+void assign_image_sequence_projection(
+    ImageSequence &sequence,
+    const std::string &projection,
+    std::optional<size_t> canvas_width = std::nullopt,
+    std::optional<size_t> canvas_height = std::nullopt,
+    std::optional<size_t> crop_left = std::nullopt,
+    std::optional<size_t> crop_top = std::nullopt,
+    const char *context = "image sequence");
 void require_no_image_sequence_acquisition(
+    const ImageSequence &sequence,
+    const char *context);
+void require_no_image_sequence_projection(
     const ImageSequence &sequence,
     const char *context);

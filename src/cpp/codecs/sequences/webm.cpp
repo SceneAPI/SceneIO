@@ -1,8 +1,9 @@
-// codecs/sequences/webm.cpp -- bounded WebM VP8/VP9 video I/O.
+// codecs/sequences/webm.cpp -- bounded WebM VP8/VP9/AV1 video I/O.
 //
 // SceneIO owns the EBML/WebM container adapter and uses the repository-pinned
 // libwebp VP8 implementation for the legacy independent-frame profile and the
-// repository-pinned libvpx implementation for temporal VP8/VP9. The supported
+// repository-pinned libvpx implementation for temporal VP8/VP9, and the
+// repository-pinned libaom implementation for temporal AV1. The supported
 // profile remains deliberately explicit: one progressive video track, 8-bit
 // 4:2:0, no lacing, alpha, audio, subtitles, attachments, or implicit tagged
 // color conversion. Timing is represented on WebM's conventional
@@ -17,8 +18,14 @@
 #include <thread>
 #include <vector>
 
+#include <aom/aom_decoder.h>
+#include <aom/aom_encoder.h>
+#include <aom/aomcx.h>
+#include <aom/aomdx.h>
 #include <nanobind/stl/string.h>
 
+#include "codecs/sequences/av1_obu.hpp"
+#include "codecs/sequences/video_frame.hpp"
 #include "records/image_sequence.hpp"
 #include "vpx/vp8cx.h"
 #include "vpx/vp8dx.h"
@@ -53,6 +60,7 @@ constexpr uint32_t kDuration = 0x4489;
 constexpr uint32_t kMuxingApp = 0x4D80;
 constexpr uint32_t kWritingApp = 0x5741;
 constexpr uint32_t kTracks = 0x1654AE6B;
+constexpr uint32_t kTags = 0x1254C367;
 constexpr uint32_t kTrackEntry = 0xAE;
 constexpr uint32_t kTrackNumber = 0xD7;
 constexpr uint32_t kTrackUid = 0x73C5;
@@ -62,7 +70,9 @@ constexpr uint32_t kFlagDefault = 0x88;
 constexpr uint32_t kFlagForced = 0x55AA;
 constexpr uint32_t kFlagLacing = 0x9C;
 constexpr uint32_t kDefaultDuration = 0x23E383;
+constexpr uint32_t kLanguage = 0x22B59C;
 constexpr uint32_t kCodecId = 0x86;
+constexpr uint32_t kCodecPrivate = 0x63A2;
 constexpr uint32_t kCodecDecodeAll = 0xAA;
 constexpr uint32_t kCodecDelay = 0x56AA;
 constexpr uint32_t kSeekPreRoll = 0x56BB;
@@ -118,22 +128,38 @@ struct VpxCodecGuard {
     }
 };
 
-enum class WebmCodec { vp8, vp9 };
+struct AomCodecGuard {
+    aom_codec_ctx_t value{};
+    bool initialized = false;
+    ~AomCodecGuard() {
+        if (initialized) aom_codec_destroy(&value);
+    }
+};
+
+enum class WebmCodec { vp8, vp9, av1 };
 
 const char *codec_id(WebmCodec codec) {
-    return codec == WebmCodec::vp8 ? "V_VP8" : "V_VP9";
+    if (codec == WebmCodec::vp8) return "V_VP8";
+    if (codec == WebmCodec::vp9) return "V_VP9";
+    return "V_AV1";
 }
 
 const char *codec_name(WebmCodec codec) {
-    return codec == WebmCodec::vp8 ? "vp8" : "vp9";
+    if (codec == WebmCodec::vp8) return "vp8";
+    if (codec == WebmCodec::vp9) return "vp9";
+    return "av1";
 }
 
 vpx_codec_iface_t *decoder_interface(WebmCodec codec) {
+    if (codec == WebmCodec::av1)
+        throw std::logic_error("webm: AV1 is not a libvpx codec");
     return codec == WebmCodec::vp8
         ? vpx_codec_vp8_dx() : vpx_codec_vp9_dx();
 }
 
 vpx_codec_iface_t *encoder_interface(WebmCodec codec) {
+    if (codec == WebmCodec::av1)
+        throw std::logic_error("webm: AV1 is not a libvpx codec");
     return codec == WebmCodec::vp8
         ? vpx_codec_vp8_cx() : vpx_codec_vp9_cx();
 }
@@ -149,6 +175,16 @@ std::string vpx_failure(
         result += " (";
         result += detail;
         result += ")";
+    }
+    return result;
+}
+
+std::string aom_failure(
+    const aom_codec_ctx_t &context, const char *operation) {
+    std::string result = std::string("webm: libaom ") + operation + " failed";
+    if (const char *message = aom_codec_error(&context)) {
+        result += ": ";
+        result += message;
     }
     return result;
 }
@@ -417,6 +453,8 @@ struct TrackMetadata {
     uint64_t default_duration_ms = 0;
     WebmCodec codec = WebmCodec::vp8;
     bool color_present = false;
+    bool matrix_present = false;
+    bool range_present = false;
     std::string matrix = "unknown";
     std::string color_range = "unknown";
 };
@@ -435,6 +473,7 @@ void parse_colour(const Element &colour, TrackMetadata &track) {
             else if (value == 9) track.matrix = "bt2020";
             else throw std::invalid_argument(
                 "webm: color matrix is not represented");
+            track.matrix_present = true;
         } else if (element.id == kRange) {
             require_once(range_seen, "Range");
             const uint64_t value = element_uint(element, "Range");
@@ -442,14 +481,14 @@ void parse_colour(const Element &colour, TrackMetadata &track) {
             else if (value == 2) track.color_range = "full";
             else throw std::invalid_argument(
                 "webm: color range is not represented");
+            track.range_present = true;
         } else if (element.id != kVoid) {
             throw std::invalid_argument(
                 "webm: unrepresented Colour metadata");
         }
     }
-    if (!matrix_seen || !range_seen)
-        throw std::invalid_argument(
-            "webm: bounded Colour metadata requires matrix and range");
+    if (!matrix_seen && !range_seen)
+        throw std::invalid_argument("webm: empty Colour metadata");
     track.color_present = true;
 }
 
@@ -529,7 +568,7 @@ TrackMetadata parse_video(const Element &video, uint64_t track_number) {
                     "webm: unrepresented video-track metadata");
         }
     }
-    if (!interlace_seen || !width_seen || !height_seen ||
+    if (!width_seen || !height_seen ||
         width == 0 || height == 0 || width > 16383 || height > 16383 ||
         width > std::numeric_limits<size_t>::max() ||
         height > std::numeric_limits<size_t>::max())
@@ -565,11 +604,13 @@ TrackMetadata parse_tracks(const Element &tracks) {
         bool uid_seen = false;
         bool type_seen = false;
         bool codec_seen = false;
+        bool codec_private_seen = false;
         bool video_seen = false;
         bool default_duration_seen = false;
         uint64_t track_number = 0;
         uint64_t default_duration_ms = 0;
         WebmCodec codec = WebmCodec::vp8;
+        Element codec_private;
         Element video;
         while (!cursor.empty()) {
             const Element element = cursor.next();
@@ -634,10 +675,21 @@ TrackMetadata parse_tracks(const Element &tracks) {
                         codec = WebmCodec::vp8;
                     } else if (value == "V_VP9") {
                         codec = WebmCodec::vp9;
+                    } else if (value == "V_AV1") {
+                        codec = WebmCodec::av1;
                     } else {
                         throw std::invalid_argument(
-                            "webm: profile supports only V_VP8 or V_VP9");
+                            "webm: profile supports only V_VP8, V_VP9, or V_AV1");
                     }
+                    break;
+                case kLanguage:
+                    if (element_string(element, "Language") != "und")
+                        throw std::invalid_argument(
+                            "webm: language-tagged video tracks are unsupported");
+                    break;
+                case kCodecPrivate:
+                    require_once(codec_private_seen, "CodecPrivate");
+                    codec_private = element;
                     break;
                 case kVideo:
                     require_once(video_seen, "Video");
@@ -653,6 +705,16 @@ TrackMetadata parse_tracks(const Element &tracks) {
         if (!number_seen || !uid_seen || !type_seen || !codec_seen ||
             !video_seen)
             throw std::invalid_argument("webm: incomplete TrackEntry");
+        if (codec_private_seen) {
+            if (codec != WebmCodec::av1 || codec_private.size < 4 ||
+                codec_private.data[0] != 0x81 ||
+                (codec_private.data[3] & 0xe0) != 0)
+                throw std::invalid_argument(
+                    "webm: malformed or inapplicable AV1 CodecPrivate");
+        } else if (codec == WebmCodec::av1) {
+            throw std::invalid_argument(
+                "webm: AV1 tracks require an AV1CodecConfigurationRecord");
+        }
         result = parse_video(video, track_number);
         result.default_duration_ms = default_duration_ms;
         result.codec = codec;
@@ -679,6 +741,8 @@ struct ParsedWebm {
     WebmCodec codec = WebmCodec::vp8;
     bool all_keyframes = true;
     bool color_present = false;
+    bool matrix_present = false;
+    bool range_present = false;
     std::string matrix = "unknown";
     std::string color_range = "unknown";
 };
@@ -728,10 +792,35 @@ void validate_vp8_keyframe(
         throw std::invalid_argument("webm: invalid VP8 keyframe payload");
 }
 
-void validate_vpx_packet(
+void validate_video_packet(
     const uint8_t *data, size_t size, const TrackMetadata &track,
     bool declared_keyframe) {
-    if (size == 0 || size > std::numeric_limits<unsigned int>::max())
+    if (size == 0)
+        throw std::invalid_argument("webm: invalid encoded frame size");
+    if (track.codec == WebmCodec::av1) {
+        sio::av1::Av1WebmPacketInfo packet_info;
+        std::string error;
+        if (!sio::av1::ParseAv1WebmPacket(
+                data, size, &packet_info, &error))
+            throw std::invalid_argument("webm: " + error);
+        aom_codec_stream_info_t info{};
+        info.is_annexb = 0;
+        const aom_codec_err_t status = aom_codec_peek_stream_info(
+            aom_codec_av1_dx(), data, size, &info);
+        if (status == AOM_CODEC_OK) {
+            if ((info.is_kf != 0) != declared_keyframe)
+                throw std::invalid_argument(
+                    "webm: container and AV1 keyframe flags disagree");
+            if (info.is_kf &&
+                (info.w != track.width || info.h != track.height))
+                throw std::invalid_argument(
+                    "webm: AV1 frame dimensions disagree with the track");
+        } else if (declared_keyframe) {
+            throw std::invalid_argument("webm: invalid AV1 keyframe payload");
+        }
+        return;
+    }
+    if (size > std::numeric_limits<unsigned int>::max())
         throw std::invalid_argument("webm: invalid encoded frame size");
     // libvpx's VP8 stream-info probe intentionally accepts keyframes only.
     // For an interframe the uncompressed three-byte frame tag still carries
@@ -841,7 +930,7 @@ FramePacket parse_block_group(
         reference_timestamp = static_cast<uint64_t>(
             signed_timestamp + reference);
     }
-    validate_vpx_packet(
+    validate_video_packet(
         payload, payload_size, track, keyframe);
     return {
         payload, payload_size, static_cast<uint64_t>(signed_timestamp),
@@ -874,7 +963,7 @@ FramePacket parse_simple_block(
     const uint8_t *payload = block.data + position;
     const size_t payload_size = block.size - position;
     const bool keyframe = (flags & 0x80) != 0;
-    validate_vpx_packet(
+    validate_video_packet(
         payload, payload_size, track, keyframe);
     return {
         payload, payload_size, static_cast<uint64_t>(signed_timestamp),
@@ -977,6 +1066,8 @@ ParsedWebm parse_webm(const uint8_t *data, size_t size) {
                 result.height = track.height;
                 result.codec = track.codec;
                 result.color_present = track.color_present;
+                result.matrix_present = track.matrix_present;
+                result.range_present = track.range_present;
                 result.matrix = track.matrix;
                 result.color_range = track.color_range;
                 break;
@@ -989,8 +1080,10 @@ ParsedWebm parse_webm(const uint8_t *data, size_t size) {
                 break;
             case kSeekHead:
             case kCues:
-                // Both are redundant navigation tables. Frame and track
-                // semantics remain authoritative and are validated directly.
+            case kTags:
+                // Navigation tables and advisory tags do not change frame,
+                // track, timing, or color semantics. Those authoritative
+                // elements are validated directly.
                 break;
             case kVoid:
                 break;
@@ -1039,21 +1132,6 @@ ParsedWebm parse_webm(const uint8_t *data, size_t size) {
         throw std::invalid_argument(
             "webm: Segment Duration disagrees with the frame timeline");
     return result;
-}
-
-void copy_vpx_plane(
-    std::vector<uint8_t> &destination, size_t output_frame,
-    size_t height, size_t width, const uint8_t *source, int stride) {
-    if (!source || stride < 0 ||
-        static_cast<size_t>(stride) < width)
-        throw std::invalid_argument(
-            "webm: libvpx returned inconsistent plane storage");
-    const size_t plane_size = height * width;
-    uint8_t *output = destination.data() + output_frame * plane_size;
-    for (size_t row = 0; row < height; ++row)
-        std::memcpy(
-            output + row * width,
-            source + row * static_cast<size_t>(stride), width);
 }
 
 std::string vpx_matrix(WebmCodec codec, vpx_color_space_t value) {
@@ -1112,24 +1190,29 @@ void decode_vpx_range(
         if (vpx_codec_get_frame(&decoder.value, &iterator) != nullptr)
             throw std::invalid_argument(
                 "webm: one VP8/VP9 packet produced multiple frames");
-        if (image->fmt != VPX_IMG_FMT_I420 || image->bit_depth != 8 ||
+        const bool high = (image->fmt & VPX_IMG_FMT_HIGHBITDEPTH) != 0;
+        const vpx_img_fmt_t base = static_cast<vpx_img_fmt_t>(
+            image->fmt & ~VPX_IMG_FMT_HIGHBITDEPTH);
+        if (base != VPX_IMG_FMT_I420 ||
+            (image->bit_depth != 8 && image->bit_depth != 10 &&
+             image->bit_depth != 12) || high != (image->bit_depth > 8) ||
             image->d_w != parsed.width || image->d_h != parsed.height)
             throw std::invalid_argument(
-                "webm: temporal profile requires 8-bit 4:2:0 frames at the track dimensions");
+                "webm: temporal profile requires 8/10/12-bit 4:2:0 frames at the track dimensions");
         const std::string decoded_matrix = vpx_matrix(parsed.codec, image->cs);
         const std::string decoded_range =
             image->range == VPX_CR_FULL_RANGE ? "full" : "limited";
-        if (parsed.color_present &&
+        if (parsed.matrix_present &&
             decoded_matrix != "unknown" &&
             decoded_matrix != parsed.matrix)
             throw std::invalid_argument(
                 "webm: codec and container color matrices disagree");
-        if (parsed.color_present && decoded_range != parsed.color_range)
+        if (parsed.range_present && decoded_range != parsed.color_range)
             throw std::invalid_argument(
                 "webm: codec and container color ranges disagree");
-        const std::string &matrix = parsed.color_present
+        const std::string &matrix = parsed.matrix_present
             ? parsed.matrix : decoded_matrix;
-        const std::string &range = parsed.color_present
+        const std::string &range = parsed.range_present
             ? parsed.color_range : decoded_range;
         if (!color_metadata_seen) {
             sequence.matrix = matrix;
@@ -1142,15 +1225,115 @@ void decode_vpx_range(
         }
         if (index < start) continue;
         const size_t output_frame = index - start;
-        copy_vpx_plane(
+        sio::video::copy_decoded_plane_to_u8(
             sequence.y, output_frame, parsed.height, parsed.width,
-            image->planes[VPX_PLANE_Y], image->stride[VPX_PLANE_Y]);
-        copy_vpx_plane(
+            image->planes[VPX_PLANE_Y], image->stride[VPX_PLANE_Y],
+            image->bit_depth, high,
+            "webm: decoder returned inconsistent plane storage");
+        sio::video::copy_decoded_plane_to_u8(
             sequence.u, output_frame, chroma_height, chroma_width,
-            image->planes[VPX_PLANE_U], image->stride[VPX_PLANE_U]);
-        copy_vpx_plane(
+            image->planes[VPX_PLANE_U], image->stride[VPX_PLANE_U],
+            image->bit_depth, high,
+            "webm: decoder returned inconsistent plane storage");
+        sio::video::copy_decoded_plane_to_u8(
             sequence.v, output_frame, chroma_height, chroma_width,
-            image->planes[VPX_PLANE_V], image->stride[VPX_PLANE_V]);
+            image->planes[VPX_PLANE_V], image->stride[VPX_PLANE_V],
+            image->bit_depth, high,
+            "webm: decoder returned inconsistent plane storage");
+    }
+}
+
+void decode_aom_range(
+    const ParsedWebm &parsed, size_t start, size_t stop,
+    ImageSequence &sequence) {
+    size_t decode_start = start;
+    while (decode_start != 0 && !parsed.frames[decode_start].keyframe)
+        --decode_start;
+    if (!parsed.frames[decode_start].keyframe)
+        throw std::invalid_argument(
+            "webm: selected AV1 frame range has no preceding keyframe");
+
+    aom_codec_dec_cfg_t config{};
+    config.threads = static_cast<unsigned int>(std::min<size_t>(
+        8, std::max<unsigned int>(1, std::thread::hardware_concurrency())));
+    config.w = static_cast<unsigned int>(parsed.width);
+    config.h = static_cast<unsigned int>(parsed.height);
+    config.allow_lowbitdepth = 1;
+    AomCodecGuard decoder;
+    if (aom_codec_dec_init(
+            &decoder.value, aom_codec_av1_dx(), &config, 0) != AOM_CODEC_OK)
+        throw std::invalid_argument(
+            aom_failure(decoder.value, "decoder initialization"));
+    decoder.initialized = true;
+
+    const size_t chroma_height = (parsed.height + 1) / 2;
+    const size_t chroma_width = (parsed.width + 1) / 2;
+    bool color_metadata_seen = false;
+    for (size_t index = decode_start; index < stop; ++index) {
+        const FramePacket &packet = parsed.frames[index];
+        if (aom_codec_decode(
+                &decoder.value, packet.data, packet.size, nullptr) !=
+            AOM_CODEC_OK)
+            throw std::invalid_argument(
+                aom_failure(decoder.value, "frame decode"));
+        aom_codec_iter_t iterator = nullptr;
+        aom_image_t *image = aom_codec_get_frame(&decoder.value, &iterator);
+        if (!image)
+            throw std::invalid_argument(
+                "webm: visible AV1 packet produced no frame");
+        if (aom_codec_get_frame(&decoder.value, &iterator) != nullptr)
+            throw std::invalid_argument(
+                "webm: one AV1 packet produced multiple frames");
+        const bool high = (image->fmt & AOM_IMG_FMT_HIGHBITDEPTH) != 0;
+        const aom_img_fmt_t base = static_cast<aom_img_fmt_t>(
+            image->fmt & ~AOM_IMG_FMT_HIGHBITDEPTH);
+        if (base != AOM_IMG_FMT_I420 ||
+            (image->bit_depth != 8 && image->bit_depth != 10 &&
+             image->bit_depth != 12) || high != (image->bit_depth > 8) ||
+            image->d_w != parsed.width || image->d_h != parsed.height)
+            throw std::invalid_argument(
+                "webm: AV1 profile requires 8/10/12-bit 4:2:0 frames at the track dimensions");
+        const std::string decoded_matrix =
+            sio::video::aom_matrix_name(image->mc, "webm");
+        const std::string decoded_range =
+            image->range == AOM_CR_FULL_RANGE ? "full" : "limited";
+        if (parsed.matrix_present && decoded_matrix != "unknown" &&
+            decoded_matrix != parsed.matrix)
+            throw std::invalid_argument(
+                "webm: AV1 codec and container color matrices disagree");
+        if (parsed.range_present && decoded_range != parsed.color_range)
+            throw std::invalid_argument(
+                "webm: AV1 codec and container color ranges disagree");
+        const std::string &matrix = parsed.matrix_present
+            ? parsed.matrix : decoded_matrix;
+        const std::string &range = parsed.range_present
+            ? parsed.color_range : decoded_range;
+        if (!color_metadata_seen) {
+            sequence.matrix = matrix;
+            sequence.color_range = range;
+            color_metadata_seen = true;
+        } else if (sequence.matrix != matrix ||
+                   sequence.color_range != range) {
+            throw std::invalid_argument(
+                "webm: per-frame AV1 color metadata changes are not represented");
+        }
+        if (index < start) continue;
+        const size_t output_frame = index - start;
+        sio::video::copy_decoded_plane_to_u8(
+            sequence.y, output_frame, parsed.height, parsed.width,
+            image->planes[AOM_PLANE_Y], image->stride[AOM_PLANE_Y],
+            image->bit_depth, high,
+            "webm: decoder returned inconsistent plane storage");
+        sio::video::copy_decoded_plane_to_u8(
+            sequence.u, output_frame, chroma_height, chroma_width,
+            image->planes[AOM_PLANE_U], image->stride[AOM_PLANE_U],
+            image->bit_depth, high,
+            "webm: decoder returned inconsistent plane storage");
+        sio::video::copy_decoded_plane_to_u8(
+            sequence.v, output_frame, chroma_height, chroma_width,
+            image->planes[AOM_PLANE_V], image->stride[AOM_PLANE_V],
+            image->bit_depth, high,
+            "webm: decoder returned inconsistent plane storage");
     }
 }
 
@@ -1216,7 +1399,10 @@ ImageSequence decode_webm(
             sequence.y.resize(sequence.n * y_size);
             sequence.u.resize(sequence.n * c_size);
             sequence.v.resize(sequence.n * c_size);
-            decode_vpx_range(parsed, start, stop, sequence);
+            if (parsed.codec == WebmCodec::av1)
+                decode_aom_range(parsed, start, stop, sequence);
+            else
+                decode_vpx_range(parsed, start, stop, sequence);
         }
         sequence.timestamps_ns.reserve(sequence.n);
         sequence.durations_ns.reserve(sequence.n);
@@ -1304,7 +1490,8 @@ std::string make_header(
     size_t width, size_t height, uint64_t duration_ms,
     WebmCodec codec = WebmCodec::vp8,
     const std::string &matrix = "",
-    const std::string &color_range = "") {
+    const std::string &color_range = "",
+    const std::string &codec_private = "") {
     std::string ebml;
     append_uint(ebml, kEbmlVersion, 1);
     append_uint(ebml, kEbmlReadVersion, 1);
@@ -1358,6 +1545,10 @@ std::string make_header(
     append_uint(entry, kFlagForced, 0);
     append_uint(entry, kFlagLacing, 0);
     append_text(entry, kCodecId, codec_id(codec));
+    if (!codec_private.empty())
+        append_element(
+            entry, kCodecPrivate,
+            codec_private.data(), codec_private.size());
     append_uint(entry, kCodecDecodeAll, 1);
     append_uint(entry, kCodecDelay, 0);
     append_uint(entry, kSeekPreRoll, 0);
@@ -1481,6 +1672,7 @@ uint64_t validate_writer_input(
     const ImageSequence &sequence, bool temporal = false) {
     validate_image_sequence(sequence, "webm write");
     require_no_image_sequence_acquisition(sequence, "webm write");
+    require_no_image_sequence_projection(sequence, "webm write");
     const bool packed =
         sequence.storage_mode == "packed" &&
         sequence.frame_dtype == "uint8" && sequence.channels == 3;
@@ -1657,7 +1849,7 @@ void drain_vpx_packets(
                 "webm: temporal encoder did not begin with a keyframe");
         const auto *data = static_cast<const uint8_t *>(
             packet->data.frame.buf);
-        validate_vpx_packet(
+        validate_video_packet(
             data, packet->data.frame.sz, track, keyframe);
         const std::string payload(
             reinterpret_cast<const char *>(data),
@@ -1673,6 +1865,261 @@ void drain_vpx_packets(
     }
 }
 
+int aom_matrix_value(const std::string &matrix) {
+    if (matrix == "bt601") return AOM_CICP_MC_BT_601;
+    if (matrix == "bt709") return AOM_CICP_MC_BT_709;
+    if (matrix == "bt2020") return AOM_CICP_MC_BT_2020_NCL;
+    throw std::invalid_argument(
+        "webm: AV1 writer cannot represent the requested color matrix");
+}
+
+void assign_aom_image(
+    aom_image_t &image, size_t width, size_t height,
+    uint8_t *y, uint8_t *u, uint8_t *v,
+    int y_stride, int uv_stride,
+    int matrix, aom_color_range_t range) {
+    image = {};
+    image.fmt = AOM_IMG_FMT_I420;
+    image.cp = AOM_CICP_CP_BT_709;
+    image.tc = AOM_CICP_TC_SRGB;
+    image.mc = static_cast<aom_matrix_coefficients_t>(matrix);
+    image.range = range;
+    image.w = image.d_w = image.r_w = static_cast<unsigned int>(width);
+    image.h = image.d_h = image.r_h = static_cast<unsigned int>(height);
+    image.bit_depth = 8;
+    image.x_chroma_shift = image.y_chroma_shift = 1;
+    image.planes[AOM_PLANE_Y] = y;
+    image.planes[AOM_PLANE_U] = u;
+    image.planes[AOM_PLANE_V] = v;
+    image.stride[AOM_PLANE_Y] = y_stride;
+    image.stride[AOM_PLANE_U] = image.stride[AOM_PLANE_V] = uv_stride;
+    image.bps = 12;
+}
+
+struct AomWebmOutput {
+    ChunkedOutput output{"webm"};
+    const ImageSequence &sequence;
+    uint64_t duration_ms = 0;
+    std::string matrix;
+    std::string color_range;
+    std::vector<uint8_t> sequence_header;
+    size_t packet_index = 0;
+    bool header_written = false;
+};
+
+void drain_aom_packets(aom_codec_ctx_t &encoder, AomWebmOutput &state) {
+    aom_codec_iter_t iterator = nullptr;
+    while (const aom_codec_cx_pkt_t *packet =
+               aom_codec_get_cx_data(&encoder, &iterator)) {
+        if (packet->kind != AOM_CODEC_CX_FRAME_PKT) continue;
+        if (state.packet_index >= state.sequence.n ||
+            packet->data.frame.buf == nullptr || packet->data.frame.sz == 0)
+            throw std::runtime_error(
+                "webm: AV1 encoder emitted an invalid frame packet");
+        const uint64_t timestamp_ms = static_cast<uint64_t>(
+            state.sequence.timestamps_ns[state.packet_index] /
+            static_cast<int64_t>(kTimestampScaleNs));
+        const uint64_t frame_duration_ms = static_cast<uint64_t>(
+            state.sequence.durations_ns[state.packet_index] /
+            static_cast<int64_t>(kTimestampScaleNs));
+        if (packet->data.frame.pts < 0 ||
+            static_cast<uint64_t>(packet->data.frame.pts) != timestamp_ms ||
+            static_cast<uint64_t>(packet->data.frame.duration) !=
+                frame_duration_ms)
+            throw std::runtime_error(
+                "webm: AV1 encoder changed the exact frame timeline");
+        const bool keyframe =
+            (packet->data.frame.flags & AOM_FRAME_IS_KEY) != 0;
+        if (state.packet_index == 0 && !keyframe)
+            throw std::runtime_error(
+                "webm: AV1 encoder did not begin with a keyframe");
+        const auto *data = static_cast<const uint8_t *>(
+            packet->data.frame.buf);
+        sio::av1::Av1WebmPacketInfo packet_info;
+        std::string error;
+        if (!sio::av1::ParseAv1WebmPacket(
+                data, packet->data.frame.sz, &packet_info, &error))
+            throw std::runtime_error("webm: " + error);
+        if (!state.header_written) {
+            if (!packet_info.has_sequence_header ||
+                !packet_info.has_frame_obu ||
+                packet_info.max_frame_width != state.sequence.width ||
+                packet_info.max_frame_height != state.sequence.height ||
+                packet_info.codec_private.empty())
+                throw std::runtime_error(
+                    "webm: first AV1 packet lacks matching configuration");
+            state.sequence_header = packet_info.sequence_header_obu;
+            const std::string codec_private(
+                reinterpret_cast<const char *>(
+                    packet_info.codec_private.data()),
+                packet_info.codec_private.size());
+            state.output.write(make_header(
+                state.sequence.width, state.sequence.height,
+                state.duration_ms, WebmCodec::av1,
+                state.matrix, state.color_range, codec_private));
+            state.header_written = true;
+        } else if (packet_info.has_sequence_header &&
+                   packet_info.sequence_header_obu != state.sequence_header) {
+            throw std::runtime_error(
+                "webm: AV1 sequence-header changes require a new segment");
+        }
+        const TrackMetadata track{
+            1, state.sequence.width, state.sequence.height,
+            0, WebmCodec::av1, true, true, true,
+            state.matrix, state.color_range};
+        validate_video_packet(
+            data, packet->data.frame.sz, track, keyframe);
+        const std::string payload(
+            reinterpret_cast<const char *>(data),
+            packet->data.frame.sz);
+        const uint64_t reference_distance_ms = keyframe ? 0
+            : timestamp_ms - static_cast<uint64_t>(
+                state.sequence.timestamps_ns[state.packet_index - 1] /
+                static_cast<int64_t>(kTimestampScaleNs));
+        state.output.write(make_cluster(
+            timestamp_ms, frame_duration_ms, payload,
+            keyframe, reference_distance_ms));
+        ++state.packet_index;
+    }
+}
+
+nb::bytes write_webm_av1_temporal(
+    const ImageSequence &sequence, uint64_t duration_ms,
+    float quality, unsigned int lane_count,
+    int speed, int keyframe_interval) {
+    const std::string matrix =
+        sequence.storage_mode == "packed" ? "bt601" : sequence.matrix;
+    const std::string color_range =
+        sequence.storage_mode == "packed" ? "limited" : sequence.color_range;
+    const int encoded_matrix = aom_matrix_value(matrix);
+    const aom_color_range_t encoded_range = color_range == "full"
+        ? AOM_CR_FULL_RANGE : AOM_CR_STUDIO_RANGE;
+
+    aom_codec_enc_cfg_t config{};
+    if (aom_codec_enc_config_default(
+            aom_codec_av1_cx(), &config, AOM_USAGE_REALTIME) != AOM_CODEC_OK)
+        throw std::runtime_error(
+            "webm: libaom has no realtime encoder configuration");
+    config.g_w = static_cast<unsigned int>(sequence.width);
+    config.g_h = static_cast<unsigned int>(sequence.height);
+    config.g_bit_depth = AOM_BITS_8;
+    config.g_input_bit_depth = 8;
+    config.g_timebase.num = 1;
+    config.g_timebase.den = 1000;
+    config.g_threads = lane_count;
+    config.g_lag_in_frames = 0;
+    config.g_pass = AOM_RC_ONE_PASS;
+    config.rc_end_usage = AOM_CQ;
+    config.rc_min_quantizer = 0;
+    config.rc_max_quantizer = 63;
+    const uint64_t raw_kbps =
+        (sequence.width * sequence.height * uint64_t{12} * sequence.n +
+         duration_ms - 1) / duration_ms;
+    config.rc_target_bitrate = static_cast<unsigned int>(std::min<uint64_t>(
+        2000000, std::max<uint64_t>(64, raw_kbps)));
+    config.rc_dropframe_thresh = 0;
+    config.kf_mode = AOM_KF_AUTO;
+    config.kf_min_dist = config.kf_max_dist =
+        static_cast<unsigned int>(keyframe_interval);
+
+    AomCodecGuard encoder;
+    if (aom_codec_enc_init(
+            &encoder.value, aom_codec_av1_cx(), &config, 0) != AOM_CODEC_OK)
+        throw std::invalid_argument(
+            aom_failure(encoder.value, "encoder initialization"));
+    encoder.initialized = true;
+    const unsigned int quantizer = static_cast<unsigned int>(std::lround(
+        (100.0f - quality) * 63.0f / 100.0f));
+    if (aom_codec_control(
+            &encoder.value, AOME_SET_CPUUSED, speed) != AOM_CODEC_OK ||
+        aom_codec_control(
+            &encoder.value, AOME_SET_CQ_LEVEL, quantizer) != AOM_CODEC_OK ||
+        aom_codec_control(
+            &encoder.value, AV1E_SET_COLOR_PRIMARIES,
+            static_cast<int>(AOM_CICP_CP_BT_709)) != AOM_CODEC_OK ||
+        aom_codec_control(
+            &encoder.value, AV1E_SET_TRANSFER_CHARACTERISTICS,
+            static_cast<int>(AOM_CICP_TC_SRGB)) != AOM_CODEC_OK ||
+        aom_codec_control(
+            &encoder.value, AV1E_SET_MATRIX_COEFFICIENTS,
+            encoded_matrix) != AOM_CODEC_OK ||
+        aom_codec_control(
+            &encoder.value, AV1E_SET_COLOR_RANGE,
+            encoded_range == AOM_CR_FULL_RANGE ? 1 : 0) != AOM_CODEC_OK)
+        throw std::invalid_argument(
+            aom_failure(encoder.value, "quality/color configuration"));
+
+    AomWebmOutput state{
+        ChunkedOutput("webm"), sequence, duration_ms,
+        matrix, color_range};
+    {
+        nb::gil_scoped_release release;
+        const size_t y_size = sequence.width * sequence.height;
+        const size_t c_size =
+            ((sequence.width + 1) / 2) * ((sequence.height + 1) / 2);
+        const size_t rgb_size = y_size * 3;
+        for (size_t index = 0; index < sequence.n; ++index) {
+            aom_image_t image{};
+            WebPPicture converted;
+            PictureGuard converted_guard;
+            if (sequence.storage_mode == "packed") {
+                if (!WebPPictureInit(&converted))
+                    throw std::runtime_error(
+                        "webm: RGB conversion initialization failed");
+                converted_guard.value = &converted;
+                converted.use_argb = 0;
+                converted.width = static_cast<int>(sequence.width);
+                converted.height = static_cast<int>(sequence.height);
+                if (!WebPPictureImportRGB(
+                        &converted,
+                        sequence.pixels_u8.data() + index * rgb_size,
+                        static_cast<int>(sequence.width * 3)))
+                    throw std::invalid_argument(
+                        "webm: RGB-to-YUV conversion failed");
+                assign_aom_image(
+                    image, sequence.width, sequence.height,
+                    converted.y, converted.u, converted.v,
+                    converted.y_stride, converted.uv_stride,
+                    encoded_matrix, encoded_range);
+            } else {
+                assign_aom_image(
+                    image, sequence.width, sequence.height,
+                    const_cast<uint8_t *>(sequence.y.data() + index * y_size),
+                    const_cast<uint8_t *>(sequence.u.data() + index * c_size),
+                    const_cast<uint8_t *>(sequence.v.data() + index * c_size),
+                    static_cast<int>(sequence.width),
+                    static_cast<int>((sequence.width + 1) / 2),
+                    encoded_matrix, encoded_range);
+            }
+            const aom_codec_pts_t timestamp = static_cast<aom_codec_pts_t>(
+                sequence.timestamps_ns[index] /
+                static_cast<int64_t>(kTimestampScaleNs));
+            const unsigned long frame_duration = static_cast<unsigned long>(
+                sequence.durations_ns[index] /
+                static_cast<int64_t>(kTimestampScaleNs));
+            if (aom_codec_encode(
+                    &encoder.value, &image, timestamp,
+                    frame_duration, 0) != AOM_CODEC_OK)
+                throw std::invalid_argument(
+                    aom_failure(encoder.value, "frame encode"));
+            drain_aom_packets(encoder.value, state);
+        }
+        for (size_t flush = 0; flush < 16; ++flush) {
+            const size_t before = state.packet_index;
+            if (aom_codec_encode(
+                    &encoder.value, nullptr, 0, 0, 0) != AOM_CODEC_OK)
+                throw std::runtime_error(
+                    aom_failure(encoder.value, "encoder flush"));
+            drain_aom_packets(encoder.value, state);
+            if (state.packet_index == before) break;
+        }
+    }
+    if (!state.header_written || state.packet_index != sequence.n)
+        throw std::runtime_error(
+            "webm: AV1 encoder did not emit exactly one visible packet per frame");
+    return state.output.finish();
+}
+
 nb::bytes write_webm_temporal(
     const ImageSequence &sequence, const std::string &codec_value,
     float quality, int threads, int speed, int keyframe_interval) {
@@ -1681,8 +2128,10 @@ nb::bytes write_webm_temporal(
         ? WebmCodec::vp8
         : codec_value == "vp9"
             ? WebmCodec::vp9
+            : codec_value == "av1"
+                ? WebmCodec::av1
             : throw std::invalid_argument(
-                  "webm: temporal codec must be 'vp8' or 'vp9'");
+                  "webm: temporal codec must be 'vp8', 'vp9', or 'av1'");
     if (!(quality >= 0.0f && quality <= 100.0f))
         throw std::invalid_argument("webm: quality must be in 0..100");
     if (threads < 0 || threads > 8)
@@ -1706,8 +2155,12 @@ nb::bytes write_webm_temporal(
             value / static_cast<int64_t>(kTimestampScaleNs));
         if (milliseconds > std::numeric_limits<unsigned long>::max())
             throw std::invalid_argument(
-                "webm: frame duration exceeds the libvpx API limit");
+                "webm: frame duration exceeds the encoder API limit");
     }
+    if (codec == WebmCodec::av1)
+        return write_webm_av1_temporal(
+            sequence, duration_ms, quality, lane_count,
+            speed, keyframe_interval);
 
     vpx_codec_enc_cfg_t config{};
     if (vpx_codec_enc_config_default(
@@ -1929,13 +2382,13 @@ nb::bytes write_webm(
 void register_webm(nb::module_ &module) {
     module.def(
         "read_webm", &read_webm, "data"_a,
-        "Decode bounded video-only WebM VP8/VP9: legacy independent VP8 "
+        "Decode bounded video-only WebM VP8/VP9/AV1: legacy independent VP8 "
         "frames remain packed RGB, temporal streams return exact planar "
         "8-bit 4:2:0 storage.");
     module.def(
         "read_webm_frames", &read_webm_frames,
         "data"_a, "start"_a, "stop"_a,
-        "Decode one nonempty half-open frame range from bounded WebM VP8/VP9, "
+        "Decode one nonempty half-open frame range from bounded WebM VP8/VP9/AV1, "
         "starting internally at the required preceding keyframe.");
     module.def(
         "write_webm", &write_webm,
@@ -1949,9 +2402,9 @@ void register_webm(nb::module_ &module) {
         "threads"_a = 0, "speed"_a = 6,
         "keyframe_interval"_a = 120,
         "Encode packed RGB or explicit planar 4:2:0 frames with direct "
-        "multithreaded libvpx VP8/VP9 temporal compression.");
+        "multithreaded VP8/VP9/AV1 temporal compression.");
     module.def(
         "_inspect_webm", &inspect_webm, "data"_a,
-        "Validate bounded WebM VP8/VP9 metadata and frame tables without "
+        "Validate bounded WebM VP8/VP9/AV1 metadata and frame tables without "
         "decoding pixels.");
 }

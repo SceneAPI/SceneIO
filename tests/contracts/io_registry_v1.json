@@ -2483,7 +2483,9 @@
           "baseline",
           "progressive",
           "grayscale_read",
-          "rgb"
+          "rgb",
+          "equirectangular_xmp",
+          "gpano_full_and_cropped_canvas"
         ],
         "unsupported_features": [
           "cmyk_write",
@@ -2516,7 +2518,9 @@
         "baseline",
         "progressive",
         "grayscale_read",
-        "rgb"
+        "rgb",
+        "equirectangular_xmp",
+        "gpano_full_and_cropped_canvas"
       ],
       "unsupported_features": [
         "cmyk_write",
@@ -3056,6 +3060,9 @@
           "vp8",
           "vp8_interframes",
           "vp9",
+          "av1",
+          "high_bit_depth_decode",
+          "uint8_normalized_output",
           "uint8",
           "rgb",
           "yuv420",
@@ -3109,6 +3116,9 @@
         "vp8",
         "vp8_interframes",
         "vp9",
+        "av1",
+        "high_bit_depth_decode",
+        "uint8_normalized_output",
         "uint8",
         "rgb",
         "yuv420",
@@ -3132,6 +3142,280 @@
         "sub_millisecond_timing",
         "hdr",
         "embedded_metadata"
+      ]
+    },
+    {
+      "capabilities": {
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
+        "extensions": [
+          ".ivf"
+        ],
+        "filenames": [],
+        "format": "ivf",
+        "lossy": true,
+        "partial_selectors": [
+          "frames"
+        ],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
+        "streams_read": true,
+        "streams_write": true,
+        "supported_features": [
+          "ivf_v0",
+          "vp8",
+          "vp9",
+          "av1",
+          "uint8",
+          "high_bit_depth_decode",
+          "uint8_normalized_output",
+          "yuv420",
+          "progressive",
+          "fixed_rational_timing",
+          "frame_ranges",
+          "worker_threads",
+          "direct_streaming_write",
+          "metadata_only_inspect"
+        ],
+        "unsupported_features": [
+          "alpha",
+          "audio",
+          "variable_frame_timing",
+          "high_bit_depth_output",
+          "embedded_metadata"
+        ]
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".ivf"
+      ],
+      "filenames": [],
+      "id": "ivf",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [
+        "444b4946"
+      ],
+      "payload_kind": "image_sequence",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "ImageSequence"
+      },
+      "requires_features": [],
+      "selectors": [
+        "frames"
+      ],
+      "streams_read": true,
+      "streams_write": true,
+      "supported_features": [
+        "ivf_v0",
+        "vp8",
+        "vp9",
+        "av1",
+        "uint8",
+        "high_bit_depth_decode",
+        "uint8_normalized_output",
+        "yuv420",
+        "progressive",
+        "fixed_rational_timing",
+        "frame_ranges",
+        "worker_threads",
+        "direct_streaming_write",
+        "metadata_only_inspect"
+      ],
+      "unsupported_features": [
+        "alpha",
+        "audio",
+        "variable_frame_timing",
+        "high_bit_depth_output",
+        "embedded_metadata"
+      ]
+    },
+    {
+      "capabilities": {
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": true,
+        "container_kind": "file",
+        "extensions": [
+          ".mjpg",
+          ".mjpeg"
+        ],
+        "filenames": [],
+        "format": "mjpeg",
+        "lossy": true,
+        "partial_selectors": [
+          "frames"
+        ],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
+        "streams_read": true,
+        "streams_write": true,
+        "supported_features": [
+          "raw_concatenated_jpeg",
+          "uint8",
+          "grayscale",
+          "rgb",
+          "frame_ranges",
+          "direct_streaming_write",
+          "metadata_only_inspect"
+        ],
+        "unsupported_features": [
+          "alpha",
+          "audio",
+          "frame_timing",
+          "high_bit_depth",
+          "embedded_metadata"
+        ]
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".mjpg",
+        ".mjpeg"
+      ],
+      "filenames": [],
+      "id": "mjpeg",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "image_sequence",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "ImageSequence"
+      },
+      "requires_features": [],
+      "selectors": [
+        "frames"
+      ],
+      "streams_read": true,
+      "streams_write": true,
+      "supported_features": [
+        "raw_concatenated_jpeg",
+        "uint8",
+        "grayscale",
+        "rgb",
+        "frame_ranges",
+        "direct_streaming_write",
+        "metadata_only_inspect"
+      ],
+      "unsupported_features": [
+        "alpha",
+        "audio",
+        "frame_timing",
+        "high_bit_depth",
+        "embedded_metadata"
+      ]
+    },
+    {
+      "capabilities": {
+        "available": true,
+        "can_inspect": true,
+        "can_read": true,
+        "can_write": false,
+        "container_kind": "file",
+        "extensions": [
+          ".mp4",
+          ".m4v",
+          ".mov"
+        ],
+        "filenames": [],
+        "format": "mp4",
+        "lossy": true,
+        "partial_selectors": [
+          "frames"
+        ],
+        "payload_kind": "image_sequence",
+        "record_type": "ImageSequence",
+        "requires_features": [],
+        "streams_read": true,
+        "streams_write": false,
+        "supported_features": [
+          "iso_bmff",
+          "classic_mp4",
+          "av1",
+          "uint8",
+          "source_bit_depth_8_10_12",
+          "uint8_normalized_output",
+          "monochrome",
+          "yuv420",
+          "yuv422",
+          "yuv444",
+          "progressive",
+          "variable_frame_timing",
+          "composition_offsets",
+          "edit_lists",
+          "pixel_aspect",
+          "frame_ranges",
+          "metadata_only_inspect"
+        ],
+        "unsupported_features": [
+          "write",
+          "fragmented_mp4",
+          "alpha",
+          "audio",
+          "subtitles",
+          "high_bit_depth_output",
+          "hdr_transfer"
+        ]
+      },
+      "container_kind": "file",
+      "dir_marker": "cameras.bin",
+      "extensions": [
+        ".mp4",
+        ".m4v",
+        ".mov"
+      ],
+      "filenames": [],
+      "id": "mp4",
+      "is_directory": false,
+      "lossy": true,
+      "magic_hex": [],
+      "payload_kind": "image_sequence",
+      "record": {
+        "module": "sceneio._core",
+        "qualname": "ImageSequence"
+      },
+      "requires_features": [],
+      "selectors": [
+        "frames"
+      ],
+      "streams_read": true,
+      "streams_write": false,
+      "supported_features": [
+        "iso_bmff",
+        "classic_mp4",
+        "av1",
+        "uint8",
+        "source_bit_depth_8_10_12",
+        "uint8_normalized_output",
+        "monochrome",
+        "yuv420",
+        "yuv422",
+        "yuv444",
+        "progressive",
+        "variable_frame_timing",
+        "composition_offsets",
+        "edit_lists",
+        "pixel_aspect",
+        "frame_ranges",
+        "metadata_only_inspect"
+      ],
+      "unsupported_features": [
+        "write",
+        "fragmented_mp4",
+        "alpha",
+        "audio",
+        "subtitles",
+        "high_bit_depth_output",
+        "hdr_transfer"
       ]
     },
     {
@@ -3605,7 +3889,11 @@
           "lazy_encoded_frames",
           "natural_order",
           "manifest_timing",
-          "frame_ranges"
+          "frame_ranges",
+          "semantic_single_image_frames",
+          "manifest_v2_frame_contract",
+          "equirectangular_manifest",
+          "typed_packed_frame_encoding"
         ],
         "unsupported_features": [
           "recursive_directories",
@@ -3636,7 +3924,11 @@
         "lazy_encoded_frames",
         "natural_order",
         "manifest_timing",
-        "frame_ranges"
+        "frame_ranges",
+        "semantic_single_image_frames",
+        "manifest_v2_frame_contract",
+        "equirectangular_manifest",
+        "typed_packed_frame_encoding"
       ],
       "unsupported_features": [
         "recursive_directories",

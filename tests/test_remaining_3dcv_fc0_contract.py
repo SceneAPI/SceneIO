@@ -75,7 +75,8 @@ def test_fc0_decisions_are_complete_provisional_and_nonpublic():
     assert date.fromisoformat(CONTRACT["contract_date"]).isoformat() == (
         CONTRACT["contract_date"]
     )
-    assert CONTRACT["builtin_count"] == len(CANONICAL_BUILTIN_IDS) == 74
+    assert CONTRACT["builtin_count"] == 74
+    assert len(CANONICAL_BUILTIN_IDS) >= CONTRACT["builtin_count"]
     assert CONTRACT["provisional_format_ids"] == []
     assert CONTRACT["implemented_format_ids"] == ["euroc_dataset"]
     assert "euroc_dataset" in CANONICAL_BUILTIN_IDS

@@ -43,7 +43,7 @@
       "safetensors": "b12eb889b47071cd7a82b3f55ca3bc3b4ed29b514bd597324ea50966d7bfe7cb",
       "netpbm": "f22aea00703a583ab696a6dee77aea41eca67b33788fb8217991e7d55e67e18c",
       "png": "9913321aeab8f0ced9811ca27029f612f57573f397492ccbd33022240d087982",
-      "jpeg": "e9d121edb75b8ba5d768b161b0cea359a21231900cc2dad00ab79d06feea65b5",
+      "jpeg": "2b339d4dbe254124fc79456bcf9f2fa97a4221694c10000ccf26bd1330433652",
       "bmp": "0f5c9df8757f3bc4e5fa7313bfb5402e1ab035f68c06f7390bbbcf828642d2a5",
       "tga": "40c4fc646f52b275694f440b246df678d32cb8862c268a844f9a8914fa0ca530",
       "hdr": "9f82df360784959faf8fcef57204497d75e82b183f04710bbc61a320caec09d3",
@@ -51,13 +51,16 @@
       "webp": "31d9460e70b68a8019c8d2e0042f6baa12d237702b078ed08f570f9332cc3b3c",
       "avif": "dfd341735733ce29d52ac4f950cf11861d050f54f4f982222b3717ca2997ef6d",
       "y4m": "d60697c09a277760e326397fdd766045fae91d35060d3cfcdbd2a854b9b5dab7",
-      "webm": "785295a461b7b863c454e0e234a4e17c5452bed292e1b05209521310cbec31f6",
+      "webm": "6f8200c2bd5dfe16534043cba810dc66ab48923733d7e4a59322604615fb6f6b",
+      "ivf": "8fdd19ad968b567ab1020f6147c531d8baae70ae32c2d0903a9cd08ba3596a59",
+      "mjpeg": "23f277112f8897a52b2e1d34a053b2de39347ab616dd78cf3651f5913629c24c",
+      "mp4": "8b14cdcc640ac940a0f6f6dd4d542936240057ee8e3ed20d69af1ab18c11318e",
       "theora": "f7ca9f66758cf2bf13d9be4319e1914040beaafe5d4b401d9129bee293918826",
       "animated_webp": "a4dd66cfdfbf597a237821728b22b5790eaef554b8faf504007822ea1550f9db",
       "apng": "3288bd352ccf46a514bb1946cec26d76355e276098ee7cc23770dcdce59679b9",
       "animated_avif": "5cb2c2630e198774d8d9d542da7c7f31494ed37d06e3059c27fedb995c0daea6",
       "rtmv": "a55384b0efbe4970ee6691d866986dfa8841843fdb628da422df4cb37e16f3ca",
-      "image_sequence": "938264c5bcc830ef227e4a97ea42de2253fd8cdf5dcc1eb3e5d2da8b997eb4c5",
+      "image_sequence": "835029751afa2c222277004aa966981940e2fddd3572f74455ad092e477b696b",
       "colmap_sparse_txt": "437229a8c877ade9ac05b85fc843708e6544193c8cfd1e2b58396c9f5dc3a79b",
       "xyz": "4928b23d5969ea8074783edc44217ccb5c4b3f366ec3a2e97ab328c9cb726a7d",
       "pts": "0526d3638c3158f52e8c87b7f8c1fa6396bbc264c71bd6d4fd442452b3edd2e9",
@@ -300,6 +303,20 @@
         "write": "ca0033ba384e2fba38c7defdcb939e74a5bb8e1df2b846a28dc5d1b768828367",
         "read_frames": "caeda3a89d9fdce6ecfb0be6e76ee0e19bf5ea48faefb36bceaf638b9d04fc8b"
       },
+      "ivf": {
+        "read": "df49eb3b923bb4c911c8563491766801c8374172a9b6db5abf6a73dee02170a7",
+        "write": "5c4d5b1d901ac4f6a0746d32b07115828e23aa329869d1f7597553e2afee1c6a",
+        "read_frames": "b415c3b312f9771f4cad3d8275dee3c8cefd2887a180e5289fdd4168cb478aa5"
+      },
+      "mjpeg": {
+        "read": "2176766a93af4ea97d1291c9581f81bd61f199d21466af6599e84265f0c4df22",
+        "write": "792bb5e9d621456f602885ccd173b66b051399c5a80552564db1700c33ec1633",
+        "read_frames": "a5cd5a08e0a475df9bb780fb860cd042cd2d75061ac43166d0d6d98f3c6567f2"
+      },
+      "mp4": {
+        "read": "d272bb9fec8b8cb5452fb48f82240d36f2f9faa4f7603d0bbc5bdd5e99924abf",
+        "read_frames": "21d5dd5db2adac6ed5b2c5ac2bacf821f2f52a9135b1ed3be6270a04be72138f"
+      },
       "theora": {
         "read": "294d6ca5ebd9d097c067c7d980efa19b2101e211dfb300d464c4614c44662fcd",
         "write": "c6b2a79437fd168cfd06f31b227cba610198565d3a3da8a3573b0d500bcaf5e7",
@@ -320,15 +337,15 @@
         "read_frames": "ebc689d2a048b1b1c3fe00b7cd99c45ae63ac342f495cc7e0c2a422b8ba9807f"
       },
       "rtmv": {
-        "read": "9bf62a0e63be8805666c018bf8fe94404d435ff583849e2afc2d69114fa2dcb5",
-        "inspect": "a0839b5fa3ebbdfb89330b9af9a673644782417058a83ef684fbf6ee32f4a0f1",
-        "read_frames": "65eb500370cf02a16dd5b76a2442fb1d82f48093a0c66222f2fdd75ad83ed5c7"
+        "read": "48fcd5891206c96baab3fa5a656af3319b9480c651c16e4eed60cffa3df8955d",
+        "inspect": "14257685e4c797d9d5fe3215364c761ab970139400c649f1b69847ffe433f913",
+        "read_frames": "e5d7ccdf902d14090b7fa1110b1d9107538a6623fe86cbeabf3fdd159ddea40b"
       },
       "image_sequence": {
-        "read": "737e28ccb24ee0dc4554841f357cccb324d3b74effdcff43716768d958036bcb",
-        "write": "a8447934d937a57dcc6d9672990ce3d2543f8a3a4d651bba4246510bb52ec413",
-        "inspect": "f446c962e953b9d942579d1ada8d8b768ea018643e424eb6bd90ce6ae5944820",
-        "read_frames": "523acbf6cde905c9affe8aa5877e12fe002421c0912b5193d8cc4de8c61ec5ab"
+        "read": "e59c2555d877a0561f38671eb51151f30dab049b5e88a359a55c5c8d5678426d",
+        "write": "e5a86c866519e0ac3dcc5d5158d6708dfc5da13e8f787b65866cb79904b0375f",
+        "inspect": "0a939bd1d19ca9b392de6d8a817631ed8e4db238dca140663a3405c1b5526780",
+        "read_frames": "554c25d0c336de7f0142d7bb949b4c3699f72dd74cf7b254a676563a38418bce"
       },
       "colmap_sparse_txt": {
         "read": "c7783b2a2161c6d42335a7b3360f24d1f55d3b59d09c499a17db7d51a15ef4e3",
@@ -431,9 +448,9 @@
         "inspect": "128e28b60dfc1f00eaf9d44e89938e095fc4cf916d51709ff20c1ca398b984f7"
       },
       "euroc_dataset": {
-        "read": "6099d953524a533218e1e05b178d0eed9090e77cd0403e030e6e51412ded1821",
-        "write": "eb49fae91ddbe2727071b1538bae6f1332a490f8ca8853561fb70dfb1cb37b1a",
-        "inspect": "0f54acd3471f78d7f99c8876dbbca6a7dd5984f6774f163d6363816e095de354"
+        "read": "2de94591859cebf5bf1c9ccdf3fa4ae630195be4c752fbcc723bd92db0e125a5",
+        "write": "4f8d42df013c599e9905f1fc754bafd1a20f57755b94f43a527dcb7a4f111dd4",
+        "inspect": "52bf29db8a82f61a814d0a58d6499484dbdc5444e9fa824bc716f69be252aaca"
       },
       "zarr": {
         "read": "e3a079c44a768ac72004c8bf9cb17598ff4b266b0547454644e60cedb1b5c153",
@@ -2637,7 +2654,7 @@
           "buffer_codecs"
         ],
         "function_count": 14,
-        "function_ast_sha256": "0046b9aaddfb86bec8147b05e18aed0da840b6382f94769d1ed8358b31275356",
+        "function_ast_sha256": "a0d4e67a9ca3ebd2c72c51500b60b53b3ad1d92813abe09e3d4e018ff8b79436",
         "node_suffixes": [
           "test_all_single_file_sinks_are_byte_identical",
           "test_directory_codec_writers_remain_byte_identical_file_sinks",
@@ -2665,7 +2682,7 @@
           "test_inspect_spz_rejects_profiles_that_read_rejects"
         ],
         "function_count": 50,
-        "function_ast_sha256": "cb949a4b95cf4d21c7442c2acc8eecc87f4f20328857d82b7facb3738886419f",
+        "function_ast_sha256": "57c83f0206735edce13ec6d9df55e02bd58fd4b5e9c3751a8503a98ab0b96810",
         "node_suffixes": [
           "test_inspect_matches_decoded_metadata_for_buffer_and_directory_codecs",
           "test_inspect_large_npy_reads_only_header",
@@ -2939,7 +2956,7 @@
               "test_manifest_order_exact_timing_inspect_and_partial",
               "test_partial_bounds_and_unsupported_directory_detection"
             ],
-            "function_ast_sha256": "994fabcc00c856fc687fb2f1725f95a356fe83b2d3c94a03beb2f48115c53f16",
+            "function_ast_sha256": "64abdee53bd1845991553d6a9ed89c0160f5a98538704d8ec0c993b494cc7a9a",
             "node_ids": [
               "tests/codecs/test_image_sequence.py::test_manifest_order_exact_timing_inspect_and_partial",
               "tests/codecs/test_image_sequence.py::test_partial_bounds_and_unsupported_directory_detection"

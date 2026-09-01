@@ -9,9 +9,9 @@
 namespace sio::bindings {
 namespace {
 
-constexpr std::size_t REGISTRATION_COUNT = 45;
-constexpr std::size_t MANIFEST_COUNT = 57;
-constexpr std::size_t NATIVE_CODEC_COUNT = 57;
+constexpr std::size_t REGISTRATION_COUNT = 48;
+constexpr std::size_t MANIFEST_COUNT = 60;
+constexpr std::size_t NATIVE_CODEC_COUNT = 60;
 
 const std::array<const FamilyBindings *, 9> &families() {
     static const std::array<const FamilyBindings *, 9> value{{
@@ -153,8 +153,9 @@ nb::tuple codec_inventory(nb::module_ &module) {
         validate_symbol_list(
             module, *codec, "stream_write", codec->stream_write);
         validate_symbol_list(module, *codec, "partial", codec->partial);
-        if (codec->read.size == 0 || codec->write.size == 0 ||
-            codec->stream_read.size == 0 || codec->stream_write.size == 0) {
+        if (codec->read.size == 0 || codec->stream_read.size == 0 ||
+            ((codec->write.size == 0) !=
+             (codec->stream_write.size == 0))) {
             throw std::runtime_error(
                 std::string("native codec ") + codec->id +
                 " lacks a required operation symbol");

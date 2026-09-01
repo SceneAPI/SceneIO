@@ -158,9 +158,7 @@ def _validate_container_profile(data) -> None:
 
     av1_config_count = 0
     for range_start, range_end in metadata_ranges:
-        for box_type, payload_start, box_end in _walk_boxes(
-            data, range_start, range_end
-        ):
+        for box_type, payload_start, box_end in _walk_boxes(data, range_start, range_end):
             if box_type in _REFUSED_BOX_TYPES:
                 name = box_type.decode("ascii", errors="replace")
                 raise ValueError(f"AVIF: {name} structures are outside this profile")
@@ -179,8 +177,7 @@ def _validate_container_profile(data) -> None:
                 if (
                     box_end - payload_start >= 11
                     and bytes(data[payload_start : payload_start + 4]) == b"nclx"
-                    and _uint(data, payload_start + 6, 2)
-                    in _HDR_TRANSFER_CHARACTERISTICS
+                    and _uint(data, payload_start + 6, 2) in _HDR_TRANSFER_CHARACTERISTICS
                 ):
                     raise ValueError("AVIF: HDR transfer functions are outside this profile")
             elif box_type == b"auxC":
@@ -210,8 +207,7 @@ def _require_provider():
         from PIL import _avif, features
     except (ImportError, ModuleNotFoundError):
         raise RuntimeError(
-            "AVIF support requires the optional dependency; "
-            "install sceneio[avif]"
+            "AVIF support requires the optional dependency; install sceneio[avif]"
         ) from None
     if not features.check_module("avif"):
         raise RuntimeError(
@@ -352,18 +348,14 @@ def _read_animated_avif(path: str | Path, start: int | None, stop: int | None):
         begin = 0 if start is None else int(start)
         end = frame_count if stop is None else int(stop)
         if begin < 0 or begin >= end or end > frame_count:
-            raise ValueError(
-                f"AVIF: frame range must satisfy 0 <= start < stop <= {frame_count}"
-            )
+            raise ValueError(f"AVIF: frame range must satisfy 0 <= start < stop <= {frame_count}")
         one_shape = _frame_shape(height, width, channels)
         output_shape = (end - begin, *one_shape)
         pixels = np.empty(output_shape, dtype=np.uint8)
         timestamps = np.empty(end - begin, dtype=np.int64)
         durations = np.empty(end - begin, dtype=np.int64)
         for output_index, source_index in enumerate(range(begin, end)):
-            frame, timestamp_ns, duration_ns = _decode_frame(
-                decoder, source_index, one_shape
-            )
+            frame, timestamp_ns, duration_ns = _decode_frame(decoder, source_index, one_shape)
             pixels[output_index] = frame
             timestamps[output_index] = timestamp_ns
             durations[output_index] = duration_ns
@@ -415,9 +407,9 @@ def _validate_sequence(value):
     if not isinstance(value, _core.ImageSequence):
         raise TypeError("animated AVIF writer: expected an ImageSequence")
     if value.has_acquisition_timing:
-        raise ValueError(
-            "animated AVIF writer: acquisition timing metadata is not representable"
-        )
+        raise ValueError("animated AVIF writer: acquisition timing metadata is not representable")
+    if value.projection != "unknown":
+        raise ValueError("animated AVIF writer: image projection metadata is not representable")
     if value.storage_mode != "packed" or value.frame_dtype != "uint8":
         raise ValueError("animated AVIF writer: requires packed uint8 frames")
     if value.maxval != 255:

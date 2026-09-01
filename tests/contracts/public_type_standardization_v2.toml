@@ -3,9 +3,9 @@ baseline_identity_count = 126
 catalog_identity_count = 131
 representation_count = 90
 payload_kind_count = 27
-builtin_format_count = 74
-catalog_json_bytes = 174131
-catalog_json_sha256 = "e99e750afe329bf307136f038c93ea4e46b7dd951a50ab395a8875d635d7bef1"
+builtin_format_count = 77
+catalog_json_bytes = 174551
+catalog_json_sha256 = "1fb918ed8232284c821def3a6874bcf2c2fa160d0c755415ebb10cd4aa313895"
 baseline_namespaces = [
   "sceneio",
   "sceneio.colmap",
@@ -236,6 +236,9 @@ format_ids = [
   "avif",
   "y4m",
   "webm",
+  "ivf",
+  "mjpeg",
+  "mp4",
   "theora",
   "animated_webp",
   "apng",

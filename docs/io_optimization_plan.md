@@ -2,7 +2,7 @@
 
 Status: complete for the original 23-codec O0-O5 scope. Its mmap, direct-sink,
 inspection, differential, memory, and partial-read capability contracts now
-cover the live 74-format registry; 37 formats expose 43 bounded selectors. This
+cover the live 77-format registry; 40 formats expose 46 bounded selectors. This
 status describes optimized I/O transport and bounded access; it does **not**
 claim that every compression/parser kernel is the fastest viable backend.
 Backend qualification remains available as a trigger-based post-R6 mechanism in
@@ -29,8 +29,8 @@ that release baseline without promoting its 124 provisional rows to
 `qualified`; exhaustive candidate comparison is not an R6 prerequisite.
 The post-R6 COLMAP dense, HDF5/hloc, Zarr, TIFF, E57, Parquet/Arrow,
 OpenVDB, USD/USDZ, AVIF, WebM, RTMV, Ogg/Theora, NCore V4, and the bounded
-EuRoC/ASL dataset unit bring the current ledger to 175 provisional, two
-known-gap, and seven not-applicable operations without changing
+EuRoC/ASL dataset and native video units bring the current ledger to 186
+provisional, two known-gap, and eight not-applicable operations without changing
 that policy.
 
 The 2026-08-03 EuRoC/ASL addition applies the same transport contract to a new
@@ -222,7 +222,7 @@ and Ubuntu builds use the expected stable extension names. Final build-only run
 and downloaded-artifact inspection.
 
 Post-0.2 format expansion inherits the same gates. The registry currently has
-74 formats: 64 single-file containers, five directories, and five multi-file
+77 formats: 67 single-file containers, five directories, and five multi-file
 formats. COLMAP SQLite
 remains path-native; SOG, OBJ/MTL, and glTF/external buffers have explicit
 multi-file adapters.
@@ -821,8 +821,8 @@ test-soundness review lenses signed off with no remaining blockers.
 
 The original 23 per-codec **parity suites + the public-API E2E test remain the
 ground-truth oracle**. Optimizations added exactly these guards across the
-**original 23-codec scope**; the registry-driven equivalents now cover all 74
-built-ins and all 43 selectors exposed by 37 formats:
+**original 23-codec scope**; the registry-driven equivalents now cover all 77
+built-ins and all 46 selectors exposed by 40 formats:
 
 1. **Differential (path-equivalence) tests** — for every fast path: `fast == slow`
    **bit-exact** (mmap==bytes, zero-copy==copy, sink==buffer, partial==slice). One

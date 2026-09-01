@@ -21,7 +21,13 @@ namespace {
 using anyarr = nb::ndarray<nb::ro, nb::c_contig, nb::device::cpu>;
 
 Image make_image(anyarr pixels, std::optional<std::string> color_space,
-                 std::optional<std::string> alpha_mode, std::optional<uint32_t> maxval) {
+                 std::optional<std::string> alpha_mode,
+                 std::optional<uint32_t> maxval,
+                 const std::string &projection,
+                 std::optional<size_t> projection_canvas_width,
+                 std::optional<size_t> projection_canvas_height,
+                 std::optional<size_t> projection_crop_left,
+                 std::optional<size_t> projection_crop_top) {
     // 1. shape: ndim 2 -> C=1; ndim 3 -> C=shape(2) in {1,3,4}; (H,W,1) -> C=1.
     if (pixels.ndim() != 2 && pixels.ndim() != 3)
         throw std::invalid_argument("image: pixels must be (H,W) or (H,W,C)");
@@ -83,6 +89,10 @@ Image make_image(anyarr pixels, std::optional<std::string> color_space,
                     : im.dtype == PixelType::U16 ? 65535u
                                                  : 0u;
     }
+    assign_image_projection(
+        im, projection, projection_canvas_width,
+        projection_canvas_height, projection_crop_left,
+        projection_crop_top);
     return im;
 }
 
@@ -117,6 +127,32 @@ void register_image(nb::module_ &m) {
         .def_prop_ro("color_space", [](const Image &im) { return im.color_space; })
         .def_prop_ro("alpha_mode", [](const Image &im) { return im.alpha_mode; })
         .def_prop_ro("maxval", [](const Image &im) { return im.maxval; })
+        .def_prop_ro(
+            "projection",
+            [](const Image &im) { return im.projection_metadata.kind; })
+        .def_prop_ro(
+            "projection_canvas_width",
+            [](const Image &im) {
+                return im.projection_metadata.canvas_width;
+            })
+        .def_prop_ro(
+            "projection_canvas_height",
+            [](const Image &im) {
+                return im.projection_metadata.canvas_height;
+            })
+        .def_prop_ro(
+            "projection_crop_left",
+            [](const Image &im) {
+                return im.projection_metadata.crop_left;
+            })
+        .def_prop_ro(
+            "projection_crop_top",
+            [](const Image &im) {
+                return im.projection_metadata.crop_top;
+            })
+        .def_prop_ro(
+            "is_full_sphere",
+            [](const Image &im) { return im.is_full_sphere(); })
         // fixed canonical tags (derived, like GaussianCloud.quaternion_order):
         .def_prop_ro("channel_order",
                      [](const Image &im) {
@@ -131,7 +167,13 @@ void register_image(nb::module_ &m) {
 
     m.def("image", &make_image, "pixels"_a, "color_space"_a = nb::none(),
           "alpha_mode"_a = nb::none(), "maxval"_a = nb::none(),
+          "projection"_a = "unknown",
+          "projection_canvas_width"_a = nb::none(),
+          "projection_canvas_height"_a = nb::none(),
+          "projection_crop_left"_a = nb::none(),
+          "projection_crop_top"_a = nb::none(),
           "Build an Image from a (H,W)/(H,W,C) uint8/uint16/float32 array (numpy or torch); "
           "C in {1,3,4}; (H,W,1) normalizes to grayscale; conventions (color_space, alpha_mode, "
-          "maxval) recorded as metadata.");
+          "maxval, and optional equirectangular full-canvas/crop geometry) are recorded as "
+          "metadata.");
 }

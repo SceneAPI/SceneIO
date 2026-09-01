@@ -12,7 +12,7 @@ The machine-checked inventories are:
   gives every public in-memory representation a versioned structural,
   scaling, coordinate-source, conversion, and refusal contract;
 - [`tests/contracts/coordinate_systems_v1.toml`](../tests/contracts/coordinate_systems_v1.toml),
-  which covers all 74 built-in format ids in registry order; and
+  which covers all 77 built-in format ids in registry order; and
 - [`tests/contracts/coordinate_conversions_v1.toml`](../tests/contracts/coordinate_conversions_v1.toml),
   which pins the qualified record types, transform direction and units,
   converted fields, preserved fields, refusal rules, and a registry-ordered
@@ -168,9 +168,9 @@ two I/O directions from the separate public conversion API. Its vocabulary is:
 | record to file | `encode_from_colmap` | a reconstruction adapter performs the inverse file-native mapping |
 | record to file | `require_fixed`, `preserve_declared`, `require_unspecified` | the writer guards the record convention before encoding rather than silently changing it |
 | either | `not_applicable` | the payload has no independent coordinate transform, for example index-only matches |
-| record to file | `unsupported` | the registry has no writer; currently this is only the read-only RTMV dataset adapter |
+| record to file | `unsupported` | the registry has no writer; currently this applies to the read-only RTMV dataset and AV1 MP4 adapters |
 
-All 74 entries name their independent oracle and the executable parity suite
+All 77 entries name their independent oracle and the executable parity suite
 that exercises it. The contract test requires exact registry order, no missing
 or duplicate id, agreement with the static coordinate status and direct
 conversion policy, agreement with actual writer availability, an existing
@@ -266,6 +266,33 @@ is record metadata, not an inferred property of the numeric values.
   their image convention. Depth and normal records additionally expose their
   depth or camera-frame interpretation when known.
 
+### Equirectangular image coordinates
+
+Panoramas remain `Image` or homogeneous `ImageSequence` records. Projection
+metadata is either `unknown` or `equirectangular`; SceneIO never infers it from
+aspect ratio. An equirectangular record declares a full canvas plus the decoded
+raster's left/top crop offset. Full-canvas records have
+`is_full_sphere == True`. Image-folder manifest declarations cover
+metadata-free encodings; embedded GPano claims must agree with that manifest.
+
+`spherical_pixels_to_rays()` maps full-canvas coordinates `(x, y)` using:
+
+```text
+longitude = 2π (x / width - 1/2)
+latitude  =  π (1/2 - y / height)
+ray       = (cos(latitude) sin(longitude),
+             -sin(latitude),
+              cos(latitude) cos(longitude))
+```
+
+This exactly matches COLMAP's `EQUIRECTANGULAR` model: +X right, +Y down, +Z
+forward, top is the -Y pole, and the longitude seam lies at -Z. The inverse
+wraps x into `[0, width)`. `equirectangular_pixels_to_rays()` and
+`rays_to_equirectangular_pixels()` additionally translate between crop-local
+and full-canvas coordinates. `equirectangular_camera()` creates COLMAP model
+17 only for a full-canvas panorama; cropped panoramas must first be resampled
+because the camera model has no crop-offset parameter.
+
 ## Explicit conversion
 
 Conversion is opt-in:
@@ -328,8 +355,8 @@ is `supported` only where the public decoded record is directly convertible;
 
 `tests/test_coordinate_systems.py` and the per-codec parity suites enforce:
 
-- exact 74-format manifest coverage and registry order;
-- exact 74-format forward/backward directionality and one independent-oracle
+- exact 77-format manifest coverage and registry order;
+- exact 77-format forward/backward directionality and one independent-oracle
   evidence path per format;
 - executable cross-repository decode of all six legacy Gaussian formats and
   cross-repository encode of compressed PLY, SOG, and SPZ, comparing decoded

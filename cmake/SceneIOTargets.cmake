@@ -38,6 +38,8 @@ target_include_directories(
     src/cpp/third_party/cgltf
     ${libwebp_SOURCE_DIR}
     ${libwebp_SOURCE_DIR}/src
+    ${aom_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/libaom
     ${libogg_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/libogg/include
     ${libtheora_SOURCE_DIR}/include
@@ -56,6 +58,7 @@ target_link_libraries(
     webpdemux
     libwebpmux
     sceneio_vpx
+    aom
     ogg
     theora_static
     Threads::Threads)

@@ -143,7 +143,7 @@ def test_registration_tables_preserve_order_and_single_ownership() -> None:
     assert tuple(function for _, function in sorted(record_entries)) == tuple(
         CONTRACT["record_registration_order"]
     )
-    assert [order for order, _ in sorted(codec_entries)] == list(range(45))
+    assert [order for order, _ in sorted(codec_entries)] == list(range(48))
     assert tuple(function for _, function in sorted(codec_entries)) == tuple(
         CONTRACT["codec_registration_order"]
     )
@@ -203,7 +203,7 @@ def test_live_native_inventory_matches_builtin_ownership_and_capabilities() -> N
     )
     assert isinstance(inventory, tuple)
     assert tuple(item["id"] for item in inventory) == expected_ids
-    assert len(expected_ids) == 57
+    assert len(expected_ids) == 60
 
     schema = tuple(NATIVE_INVENTORY_CONTRACT["schema"])
     assert schema == ("id", "read", "write", "inspect", "partial")
@@ -249,7 +249,7 @@ def test_live_native_inventory_matches_builtin_ownership_and_capabilities() -> N
                 for symbol in symbols
             )
         assert item["read"]
-        assert item["write"]
+        assert bool(item["write"]) == capabilities.can_write
         assert item["stream_read"] == expected_operations["read"]
         assert item["stream_write"] == expected_operations["write"]
         assert bool(item["stream_read"]) == capabilities.streams_read

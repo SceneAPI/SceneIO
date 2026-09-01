@@ -25,6 +25,13 @@ _WEBM_WRITERS = {
     "vp8-keyframe": _core.write_webm,
     "vp8-temporal": partial(_core.write_webm_temporal, codec="vp8"),
     "vp9-temporal": partial(_core.write_webm_temporal, codec="vp9"),
+    "av1-temporal": partial(_core.write_webm_temporal, codec="av1"),
+}
+
+_IVF_WRITERS = {
+    "vp8": partial(_core.write_ivf, codec="vp8"),
+    "vp9": partial(_core.write_ivf, codec="vp9"),
+    "av1": partial(_core.write_ivf, codec="av1"),
 }
 
 
@@ -35,6 +42,17 @@ def _write_webm(sequence, path: str, *, profile: str = "vp8-keyframe") -> None:
         raise ValueError(
             f"WebM writer: unknown profile {profile!r}; expected one of "
             + ", ".join(_WEBM_WRITERS)
+        ) from None
+    _core._write_to_file(function, sequence, path)
+
+
+def _write_ivf(sequence, path: str, *, profile: str = "vp9") -> None:
+    try:
+        function = _IVF_WRITERS[profile]
+    except KeyError:
+        raise ValueError(
+            f"IVF writer: unknown profile {profile!r}; expected one of "
+            + ", ".join(_IVF_WRITERS)
         ) from None
     _core._write_to_file(function, sequence, path)
 
@@ -79,6 +97,9 @@ _WEBM_CODEC = Codec(
         "vp8",
         "vp8_interframes",
         "vp9",
+        "av1",
+        "high_bit_depth_decode",
+        "uint8_normalized_output",
         "uint8",
         "rgb",
         "yuv420",
@@ -102,6 +123,108 @@ _WEBM_CODEC = Codec(
         "sub_millisecond_timing",
         "hdr",
         "embedded_metadata",
+    ),
+)
+
+_IVF_CODEC = Codec(
+    "ivf",
+    (".ivf",),
+    _mmap_reader(_core.read_ivf),
+    _write_ivf,
+    record=_core.ImageSequence,
+    payload_kind="image_sequence",
+    magic=(b"DKIF",),
+    read_frames=_mmap_selector_reader(_core.read_ivf_frames),
+    lossy=True,
+    supported_features=(
+        "ivf_v0",
+        "vp8",
+        "vp9",
+        "av1",
+        "uint8",
+        "high_bit_depth_decode",
+        "uint8_normalized_output",
+        "yuv420",
+        "progressive",
+        "fixed_rational_timing",
+        "frame_ranges",
+        "worker_threads",
+        "direct_streaming_write",
+        "metadata_only_inspect",
+    ),
+    unsupported_features=(
+        "alpha",
+        "audio",
+        "variable_frame_timing",
+        "high_bit_depth_output",
+        "embedded_metadata",
+    ),
+)
+
+_MJPEG_CODEC = Codec(
+    "mjpeg",
+    (".mjpg", ".mjpeg"),
+    _mmap_reader(_core.read_mjpeg),
+    _file_sink_writer(_core.write_mjpeg),
+    record=_core.ImageSequence,
+    payload_kind="image_sequence",
+    read_frames=_mmap_selector_reader(_core.read_mjpeg_frames),
+    lossy=True,
+    supported_features=(
+        "raw_concatenated_jpeg",
+        "uint8",
+        "grayscale",
+        "rgb",
+        "frame_ranges",
+        "direct_streaming_write",
+        "metadata_only_inspect",
+    ),
+    unsupported_features=(
+        "alpha",
+        "audio",
+        "frame_timing",
+        "high_bit_depth",
+        "embedded_metadata",
+    ),
+)
+
+_MP4_CODEC = Codec(
+    "mp4",
+    (".mp4", ".m4v", ".mov"),
+    _mmap_reader(_core.read_mp4),
+    None,
+    record=_core.ImageSequence,
+    payload_kind="image_sequence",
+    read_frames=_mmap_selector_reader(_core.read_mp4_frames),
+    streams_write=False,
+    lossy=True,
+    supported_features=(
+        "iso_bmff",
+        "classic_mp4",
+        "av1",
+        "uint8",
+        "source_bit_depth_8_10_12",
+        "uint8_normalized_output",
+        "monochrome",
+        "yuv420",
+        "yuv422",
+        "yuv444",
+        "progressive",
+        "variable_frame_timing",
+        "composition_offsets",
+        "edit_lists",
+        "pixel_aspect",
+        "frame_ranges",
+        "metadata_only_inspect",
+    ),
+    unsupported_features=(
+        "write",
+        "fragmented_mp4",
+        "alpha",
+        "audio",
+        "subtitles",
+        "high_bit_depth_output",
+        "hdr_transfer",
     ),
 )
 
@@ -257,6 +380,9 @@ def build_sequence_codecs(
     return (
         _Y4M_CODEC,
         _WEBM_CODEC,
+        _IVF_CODEC,
+        _MJPEG_CODEC,
+        _MP4_CODEC,
         _THEORA_CODEC,
         _ANIMATED_WEBP_CODEC,
         _APNG_CODEC,
@@ -324,6 +450,10 @@ def build_sequence_codecs(
                 "natural_order",
                 "manifest_timing",
                 "frame_ranges",
+                "semantic_single_image_frames",
+                "manifest_v2_frame_contract",
+                "equirectangular_manifest",
+                "typed_packed_frame_encoding",
             ),
             unsupported_features=(
                 "recursive_directories",

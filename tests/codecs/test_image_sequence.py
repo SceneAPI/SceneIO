@@ -13,6 +13,47 @@ import pytest
 import sceneio
 from sceneio import _core
 from sceneio.io import _image_sequence as adapter
+from sceneio.io import registry
+
+
+def _frame_contract(
+    *,
+    height: int = 3,
+    width: int = 4,
+    channels: int = 1,
+    dtype: str = "uint8",
+    color_space: str = "gray",
+    alpha_mode: str = "none",
+    maxval: int = 255,
+    projection: str = "unknown",
+    projection_canvas_width: int = 0,
+    projection_canvas_height: int = 0,
+    projection_crop_left: int = 0,
+    projection_crop_top: int = 0,
+):
+    return {
+        "height": height,
+        "width": width,
+        "channels": channels,
+        "dtype": dtype,
+        "color_space": color_space,
+        "alpha_mode": alpha_mode,
+        "maxval": maxval,
+        "projection": projection,
+        "projection_canvas_width": projection_canvas_width,
+        "projection_canvas_height": projection_canvas_height,
+        "projection_crop_left": projection_crop_left,
+        "projection_crop_top": projection_crop_top,
+    }
+
+
+def _manifest(frames, *, contract=None, version=2, **extra):
+    return {
+        "sceneio_image_sequence": version,
+        "frame_contract": _frame_contract() if contract is None else contract,
+        "frames": frames,
+        **extra,
+    }
 
 
 def _pgm(values: np.ndarray) -> bytes:
@@ -25,10 +66,7 @@ def _write_frames(directory: Path, names: list[str], *, shape=(3, 4)):
     directory.mkdir()
     payloads = {}
     for index, name in enumerate(names):
-        values = (
-            np.arange(shape[0] * shape[1], dtype=np.uint8).reshape(shape)
-            + index * 17
-        )
+        values = np.arange(shape[0] * shape[1], dtype=np.uint8).reshape(shape) + index * 17
         payloads[name] = _pgm(values)
         (directory / name).write_bytes(payloads[name])
     return payloads
@@ -82,9 +120,7 @@ def test_unmanifested_directory_uses_deterministic_natural_order(tmp_path):
     assert sequence.y.shape == (0, 0, 0)
 
     # Frames remain encoded and independently readable through their owned paths.
-    for name, path in zip(
-        sequence.frame_names, sequence.frame_paths, strict=True
-    ):
+    for name, path in zip(sequence.frame_names, sequence.frame_paths, strict=True):
         assert Path(path).read_bytes() == payloads[name]
         assert sceneio.read(path).pixels.tobytes() == payloads[name][-12:]
 
@@ -92,14 +128,13 @@ def test_unmanifested_directory_uses_deterministic_natural_order(tmp_path):
 def test_manifest_order_exact_timing_inspect_and_partial(tmp_path):
     directory = tmp_path / "timed"
     payloads = _write_frames(directory, ["a.pgm", "b.pgm", "c.pgm"])
-    document = {
-        "sceneio_image_sequence": 1,
-        "frames": [
+    document = _manifest(
+        [
             {"file": "c.pgm", "timestamp_ns": 100, "duration_ns": 40},
             {"file": "a.pgm", "timestamp_ns": 140, "duration_ns": 41},
             {"file": "b.pgm", "timestamp_ns": 181, "duration_ns": 39},
-        ],
-    }
+        ]
+    )
     (directory / "sceneio_sequence.json").write_text(
         json.dumps(document),
         encoding="utf-8",
@@ -111,9 +146,7 @@ def test_manifest_order_exact_timing_inspect_and_partial(tmp_path):
     assert sequence.timestamps_ns.tolist() == [100, 140, 181]
     assert sequence.durations_ns.tolist() == [40, 41, 39]
     assert sequence.has_timing
-    for name, path in zip(
-        sequence.frame_names, sequence.frame_paths, strict=True
-    ):
+    for name, path in zip(sequence.frame_names, sequence.frame_paths, strict=True):
         assert Path(path).read_bytes() == payloads[name]
 
     info = sceneio.inspect(directory)
@@ -127,7 +160,18 @@ def test_manifest_order_exact_timing_inspect_and_partial(tmp_path):
         "storage_mode": "encoded_paths",
         "has_timing": True,
         "manifest": True,
+        "manifest_version": 2,
         "frame_names": ("c.pgm", "a.pgm", "b.pgm"),
+        "frame_formats": ("netpbm", "netpbm", "netpbm"),
+        "color_space": "gray",
+        "alpha_mode": "none",
+        "maxval": 255,
+        "projection": "unknown",
+        "projection_canvas_width": 0,
+        "projection_canvas_height": 0,
+        "projection_crop_left": 0,
+        "projection_crop_top": 0,
+        "is_full_sphere": False,
     }
 
     selected = sceneio.read_partial(directory, frames=(1, 3))
@@ -151,12 +195,20 @@ def test_directory_write_copies_encoded_bytes_and_is_deterministic(tmp_path):
     assert sceneio.detect(destination) == "image_sequence"
     assert (destination / "f1.pgm").read_bytes() == payloads["f1.pgm"]
     assert (destination / "f2.pgm").read_bytes() == payloads["f2.pgm"]
-    assert (destination / "sceneio_sequence.json").read_text(
-        encoding="utf-8"
-    ) == (
-        '{"frames":[{"duration_ns":50,"file":"f1.pgm","timestamp_ns":0},'
-        '{"duration_ns":50,"file":"f2.pgm","timestamp_ns":50}],'
-        '"sceneio_image_sequence":1}\n'
+    expected_manifest = _manifest(
+        [
+            {"duration_ns": 50, "file": "f1.pgm", "timestamp_ns": 0},
+            {"duration_ns": 50, "file": "f2.pgm", "timestamp_ns": 50},
+        ]
+    )
+    assert (destination / "sceneio_sequence.json").read_text(encoding="utf-8") == (
+        json.dumps(
+            expected_manifest,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        + "\n"
     )
     decoded = sceneio.read(destination)
     assert decoded.frame_names == sequence.frame_names
@@ -185,41 +237,29 @@ def test_rewriting_the_same_directory_stages_all_reads_before_replace(tmp_path):
         [],
         {},
         {"sceneio_image_sequence": 2, "frames": [{"file": "a.pgm"}]},
-        {"sceneio_image_sequence": 1, "frames": []},
-        {
-            "sceneio_image_sequence": 1,
-            "frames": [{"file": "a.pgm"}],
-            "extra": 1,
-        },
-        {
-            "sceneio_image_sequence": 1,
-            "frames": [{"file": "../a.pgm"}],
-        },
-        {
-            "sceneio_image_sequence": 1,
-            "frames": [{"file": "a.txt"}],
-        },
-        {
-            "sceneio_image_sequence": 1,
-            "frames": [{"file": "a.pgm"}, {"file": "a.pgm"}],
-        },
-        {
-            "sceneio_image_sequence": 1,
-            "frames": [
+        _manifest([{"file": "a.pgm"}], version=1),
+        _manifest([]),
+        _manifest([{"file": "a.pgm"}], extra=1),
+        _manifest([{"file": "../a.pgm"}]),
+        _manifest([{"file": "a.txt"}]),
+        _manifest([{"file": "a.tif"}]),
+        _manifest([{"file": "a.pgm"}, {"file": "a.pgm"}]),
+        _manifest(
+            [
                 {"file": "a.pgm", "timestamp_ns": 0, "duration_ns": 1},
                 {"file": "b.pgm"},
-            ],
-        },
-        {
-            "sceneio_image_sequence": 1,
-            "frames": [
+            ]
+        ),
+        _manifest(
+            [
                 {"file": "a.pgm", "timestamp_ns": True, "duration_ns": 1},
-            ],
-        },
-        {
-            "sceneio_image_sequence": 1,
-            "frames": [{"file": "missing.pgm"}],
-        },
+            ]
+        ),
+        _manifest([{"file": "missing.pgm"}]),
+        _manifest(
+            [{"file": "a.pgm"}],
+            contract=_frame_contract(projection_canvas_width=4),
+        ),
     ],
 )
 def test_manifest_schema_and_references_are_strict(tmp_path, document):
@@ -245,8 +285,7 @@ def test_invalid_json_oversized_manifest_and_heterogeneous_frames_reject(tmp_pat
     duplicate = tmp_path / "duplicate_json"
     _write_frames(duplicate, ["a.pgm"])
     (duplicate / "sceneio_sequence.json").write_text(
-        '{"sceneio_image_sequence":1,"frames":[{"file":"a.pgm",'
-        '"file":"a.pgm"}]}',
+        '{"sceneio_image_sequence":1,"frames":[{"file":"a.pgm","file":"a.pgm"}]}',
         encoding="utf-8",
     )
     with pytest.raises(sceneio.FormatError, match="duplicate manifest key"):
@@ -254,9 +293,7 @@ def test_invalid_json_oversized_manifest_and_heterogeneous_frames_reject(tmp_pat
 
     oversized = tmp_path / "oversized"
     _write_frames(oversized, ["a.pgm"])
-    (oversized / "sceneio_sequence.json").write_bytes(
-        b" " * (1024 * 1024 + 1)
-    )
+    (oversized / "sceneio_sequence.json").write_bytes(b" " * (1024 * 1024 + 1))
     with pytest.raises(sceneio.FormatError, match="1 MiB"):
         sceneio.read(oversized)
 
@@ -364,6 +401,204 @@ def test_failed_staging_preserves_existing_destination(tmp_path, monkeypatch):
         sceneio.write(sequence, destination, format="image_sequence")
     assert sentinel.read_text(encoding="utf-8") == "keep"
     assert sorted(item.name for item in destination.iterdir()) == ["existing.txt"]
+
+
+@pytest.mark.parametrize(
+    ("format_id", "extension", "dtype", "channels"),
+    [
+        ("netpbm", ".ppm", "uint8", 3),
+        ("netpbm", ".pgm", "uint8", 1),
+        ("netpbm", ".pnm", "uint8", 3),
+        ("png", ".png", "uint8", 3),
+        ("jpeg", ".jpg", "uint8", 3),
+        ("jpeg", ".jpeg", "uint8", 3),
+        ("bmp", ".bmp", "uint8", 3),
+        ("tga", ".tga", "uint8", 3),
+        ("hdr", ".hdr", "float32", 3),
+        ("exr", ".exr", "float32", 3),
+        ("webp", ".webp", "uint8", 3),
+        ("avif", ".avif", "uint8", 3),
+    ],
+)
+def test_every_canonical_image_extension_is_a_folder_frame(
+    tmp_path, format_id, extension, dtype, channels
+):
+    if not sceneio.capabilities(format_id).available:
+        pytest.skip(f"{format_id} provider is unavailable")
+    folder = tmp_path / f"frames-{format_id}-{extension[1:]}"
+    folder.mkdir()
+    if dtype == "float32":
+        pixels = np.linspace(0.0, 1.0, 36, dtype=np.float32).reshape(3, 4, 3)
+        image = sceneio.image(pixels, color_space="linear")
+    elif channels == 1:
+        image = sceneio.image(np.arange(12, dtype=np.uint8).reshape(3, 4))
+    else:
+        image = sceneio.image(
+            np.arange(36, dtype=np.uint8).reshape(3, 4, 3),
+            color_space="srgb",
+        )
+    sceneio.write(image, folder / f"frame001{extension}", format=format_id)
+
+    sequence = sceneio.read_image_folder(folder)
+    assert sequence.storage_mode == "encoded_paths"
+    assert sequence.num_frames == 1
+    assert (sequence.height, sequence.width, sequence.channels) == (3, 4, channels)
+    assert sequence.frame_dtype == dtype
+
+
+@pytest.mark.parametrize(
+    ("format_id", "extension"),
+    [
+        ("apng", ".png"),
+        ("animated_webp", ".webp"),
+        ("animated_avif", ".avif"),
+    ],
+)
+def test_shared_extension_animations_are_not_folder_frames(tmp_path, format_id, extension):
+    if not sceneio.capabilities(format_id).available:
+        pytest.skip(f"{format_id} provider is unavailable")
+    frames = np.zeros((2, 3, 4, 4), np.uint8)
+    frames[0, ...] = (255, 0, 0, 255)
+    frames[1, ...] = (0, 255, 0, 255)
+    sequence = _core.image_sequence_packed(
+        frames,
+        np.array([0, 40_000_000], np.int64),
+        np.array([40_000_000, 40_000_000], np.int64),
+        "srgb",
+        "straight",
+    )
+    folder = tmp_path / format_id
+    folder.mkdir()
+    sceneio.write(sequence, folder / f"frame{extension}", format=format_id)
+
+    with pytest.raises(sceneio.FormatError, match="not Image"):
+        sceneio.read_image_folder(folder)
+
+
+def test_mixed_static_formats_share_one_contract(tmp_path):
+    folder = tmp_path / "mixed-static"
+    folder.mkdir()
+    image = sceneio.image(
+        np.arange(36, dtype=np.uint8).reshape(3, 4, 3),
+        color_space="srgb",
+    )
+    sceneio.write(image, folder / "frame1.png")
+    sceneio.write(image, folder / "frame2.bmp")
+
+    sequence = sceneio.read_image_folder(folder)
+    assert sequence.frame_names == ["frame1.png", "frame2.bmp"]
+    assert sceneio.inspect(folder, format="image_sequence").metadata["frame_formats"] == (
+        "png",
+        "bmp",
+    )
+
+
+def test_projection_manifest_and_packed_folder_encoding(tmp_path):
+    pixels = np.zeros((2, 4, 8, 3), np.uint8)
+    sequence = _core.image_sequence_packed(
+        pixels,
+        np.array([0, 50], np.int64),
+        np.array([50, 50], np.int64),
+        "srgb",
+        "none",
+        projection="equirectangular",
+    )
+
+    png_folder = tmp_path / "png-pano"
+    sceneio.write_image_folder(sequence, png_folder, frame_format="png")
+    decoded_png = sceneio.read(png_folder)
+    assert decoded_png.projection == "equirectangular"
+    assert decoded_png.is_full_sphere
+    assert sceneio.read(png_folder / "frame000000.png").projection == "unknown"
+    manifest = json.loads((png_folder / "sceneio_sequence.json").read_text(encoding="utf-8"))
+    assert manifest["sceneio_image_sequence"] == 2
+    assert manifest["frame_contract"]["projection"] == "equirectangular"
+
+    jpeg_folder = tmp_path / "jpeg-pano"
+    sceneio.write_image_folder(sequence, jpeg_folder, frame_format="jpeg")
+    assert sceneio.read(jpeg_folder / "frame000000.jpg").projection == "equirectangular"
+    assert sceneio.read(jpeg_folder).projection == "equirectangular"
+
+    with pytest.raises(sceneio.FormatError, match="one canonical Image"):
+        sceneio.write_image_folder(sequence, tmp_path / "bad", frame_format="tiff")
+
+
+def test_gpano_folder_inference_requires_homogeneous_embedded_claims(tmp_path):
+    folder = tmp_path / "gpano"
+    folder.mkdir()
+    pixels = np.zeros((4, 8, 3), np.uint8)
+    pano = sceneio.image(pixels, color_space="srgb", projection="equirectangular")
+    sceneio.write(pano, folder / "a.jpg")
+    sceneio.write(pano, folder / "b.jpg")
+    sequence = sceneio.read_image_folder(folder)
+    assert sequence.projection == "equirectangular"
+    assert sceneio.equirectangular_camera(sequence).model_id == 17
+    assert sceneio.read_image_folder(folder, projection="equirectangular").is_full_sphere
+    with pytest.raises(sceneio.FormatError, match="conflicts with the stored"):
+        sceneio.read_image_folder(folder, projection="unknown")
+    with pytest.raises(sceneio.FormatError, match="geometry conflicts"):
+        sceneio.read_image_folder(
+            folder,
+            projection="equirectangular",
+            canvas_width=9,
+        )
+
+    sceneio.write(sceneio.image(pixels, color_space="srgb"), folder / "c.jpg")
+    with pytest.raises(sceneio.FormatError, match="heterogeneous frame contracts"):
+        sceneio.read_image_folder(folder)
+
+
+def test_typed_read_declares_metadata_free_panorama(tmp_path):
+    folder = tmp_path / "plain"
+    folder.mkdir()
+    sceneio.write(
+        sceneio.image(np.zeros((4, 8, 3), np.uint8), color_space="srgb"),
+        folder / "frame.png",
+    )
+    sequence = sceneio.read_image_folder(folder, projection="equirectangular")
+    assert sequence.projection == "equirectangular"
+    assert sequence.is_full_sphere
+    np.testing.assert_allclose(
+        sceneio.equirectangular_pixels_to_rays(sequence, [[4.0, 2.0]]),
+        [[0.0, 0.0, 1.0]],
+        atol=1e-15,
+    )
+
+
+def test_live_registered_image_codec_becomes_a_folder_frame(tmp_path):
+    format_id = "__image_folder_probe__"
+    extension = ".sceneioframe"
+    codec = sceneio.Codec(
+        format_id,
+        (extension,),
+        lambda _path: sceneio.image(np.zeros((2, 3), np.uint8)),
+        None,
+        record=sceneio.Image,
+        payload_kind="image",
+        inspect=lambda path: sceneio.Inspection(
+            format_id,
+            "image",
+            Path(path).stat().st_size,
+            shape=(2, 3),
+            dtype="uint8",
+            channels=1,
+        ),
+    )
+    sceneio.io.register(codec)
+    try:
+        folder = tmp_path / "plugin"
+        folder.mkdir()
+        (folder / f"frame{extension}").write_bytes(b"probe")
+        sequence = sceneio.read_image_folder(folder)
+        assert sequence.frame_names == [f"frame{extension}"]
+        assert sequence.color_space == "gray"
+    finally:
+        registry.REGISTRY.pop(format_id, None)
+
+
+def test_tiff_and_animated_only_extensions_are_outside_frame_catalog():
+    extensions = registry._IMAGE_FRAME_ACCESS.image_extensions()
+    assert {".tif", ".tiff", ".apng", ".avifs"}.isdisjoint(extensions)
 
 
 def test_large_encoded_frame_copy_has_bounded_python_memory(tmp_path):

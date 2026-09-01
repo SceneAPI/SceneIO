@@ -238,6 +238,56 @@ add_subdirectory(
   EXCLUDE_FROM_ALL)
 set_property(TARGET sceneio_vpx PROPERTY C_VISIBILITY_PRESET hidden)
 
+# libaom 3.13.1 (BSD-2-Clause + Alliance for Open Media patent grant) --
+# repository-contained AV1 encode/decode for IVF, WebM, and MP4. Keep the
+# immutable upstream tarball in the source tree instead of expanding another
+# large third-party checkout: CMake extracts it into the disposable build tree
+# and verifies the bytes before configuring upstream. The generic CPU target
+# avoids assembler/toolchain downloads and is portable across the wheel matrix.
+set(aom_ARCHIVE_DIR "${PROJECT_SOURCE_DIR}/src/cpp/third_party/aom")
+set(aom_ARCHIVE
+  "${aom_ARCHIVE_DIR}/aom-d772e334cc724105040382a977ebb10dfd393293.tar.gz")
+if(NOT EXISTS "${aom_ARCHIVE}" OR
+   NOT EXISTS "${aom_ARCHIVE_DIR}/LICENSE" OR
+   NOT EXISTS "${aom_ARCHIVE_DIR}/PATENTS")
+  message(FATAL_ERROR
+    "Repository-contained libaom 3.13.1 source archive is incomplete")
+endif()
+file(SHA256 "${aom_ARCHIVE}" aom_ARCHIVE_SHA256)
+if(NOT aom_ARCHIVE_SHA256 STREQUAL
+   "b35239b1547516833fcb5bde03e49c945e93b8e7240a5fe7e19ada46aae69f32")
+  message(FATAL_ERROR
+    "Repository-contained libaom source archive has an unexpected digest")
+endif()
+set(aom_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/aom-src")
+if(NOT EXISTS "${aom_SOURCE_DIR}/CMakeLists.txt")
+  file(MAKE_DIRECTORY "${aom_SOURCE_DIR}")
+  file(ARCHIVE_EXTRACT INPUT "${aom_ARCHIVE}" DESTINATION "${aom_SOURCE_DIR}")
+endif()
+if(WIN32 AND NOT PERL_EXECUTABLE)
+  find_program(
+    PERL_EXECUTABLE perl
+    HINTS
+      "$ENV{ProgramFiles}/Git/usr/bin"
+      "C:/Program Files/Git/usr/bin"
+      "C:/Program Files (x86)/Git/usr/bin")
+endif()
+set(AOM_TARGET_CPU generic CACHE STRING "" FORCE)
+set(ENABLE_DOCS OFF CACHE BOOL "" FORCE)
+set(ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(ENABLE_TESTDATA OFF CACHE BOOL "" FORCE)
+set(ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+set(ENABLE_TOOLS OFF CACHE BOOL "" FORCE)
+set(CONFIG_AV1_HIGHBITDEPTH 1 CACHE STRING "" FORCE)
+set(CONFIG_PIC 1 CACHE STRING "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(
+  "${aom_SOURCE_DIR}"
+  "${CMAKE_CURRENT_BINARY_DIR}/libaom"
+  EXCLUDE_FROM_ALL)
+set_property(TARGET aom PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET aom PROPERTY C_VISIBILITY_PRESET hidden)
+
 # libogg 1.3.6 and libtheora 1.2.0 (BSD-3-Clause) -- repository-contained
 # upstream sources. libogg retains its upstream CMake configuration; Theora is
 # built from the upstream portable C implementation so the same source set is

@@ -81,12 +81,80 @@ frame = sceneio.FrameMeta(
 ## Format I/O
 
 <!-- sceneio-inventory-summary:start -->
-**Generated registry contract:** SceneIO has **74 built-in formats**: **64**
-single-file, **5** directory, and **5** multi-file containers. **74** are readable,
-**73** writable, and **74** inspectable; **37** formats expose **43** bounded partial
-selectors. **74** provide streaming reads and **71** provide streaming writes. The
+**Generated registry contract:** SceneIO has **77 built-in formats**: **67**
+single-file, **5** directory, and **5** multi-file containers. **77** are readable,
+**75** writable, and **77** inspectable; **40** formats expose **46** bounded partial
+selectors. **77** provide streaming reads and **73** provide streaming writes. The
 values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
 <!-- sceneio-inventory-summary:end -->
+
+The native, FFmpeg-free moving-image profiles are deliberately bounded: IVF
+and WebM read and write VP8, VP9, and AV1; raw concatenated MJPEG reads and
+writes independent JPEG frames; classic non-fragmented MP4/M4V/MOV reads AV1;
+and animated AVIF remains available through the optional AVIF provider. MP4
+writing, audio, subtitles, fragmented MP4, and non-AV1 ISO BMFF tracks are not
+silently accepted.
+
+### 360° / equirectangular images
+
+SceneIO uses the existing `Image` and `ImageSequence` records for panoramas
+instead of creating parallel spherical types. Their
+`projection == "equirectangular"` contract carries the full panorama canvas
+and optional crop offset used by Google Photo Sphere (GPano). Full-canvas
+records additionally report `is_full_sphere == True`.
+
+```python
+import sceneio
+
+# JPEG GPano XMP is discovered and preserved automatically.
+pano = sceneio.read("pano.jpg")
+assert pano.projection == "equirectangular"
+
+# Metadata-free image formats require an explicit declaration; SceneIO never
+# guesses spherical geometry merely from a 2:1 aspect ratio.
+pano = sceneio.read_equirectangular("pano.png")
+rays = sceneio.equirectangular_pixels_to_rays(pano, [[0.0, 0.0]])
+camera = sceneio.equirectangular_camera(pano)  # COLMAP model 17
+```
+
+`spherical_pixels_to_rays()` and `rays_to_spherical_pixels()` implement the
+same longitude/latitude convention as COLMAP: +X right, +Y down, +Z forward,
+with the wrap seam at -Z. JPEG read/write and inspection preserve GPano full
+and cropped-canvas fields. Other still-image encodings can be read through the
+explicit adapter, but public writes refuse to discard the projection metadata.
+
+### Image folders
+
+`read_image_folder()` is the typed entry point for a flat folder of still
+images. Candidate names come from the live image registry, but every file is
+content-detected and must resolve to one canonical `Image`; APNG, animated
+WebP, animated AVIF, TIFF collections, video, and depth payloads fail closed.
+Frames may mix still encodings when dimensions, channels, dtype, sample range,
+and projection agree.
+
+```python
+import sceneio
+
+sequence = sceneio.read_image_folder("frames")
+
+# Metadata-free panorama folders require an explicit declaration.
+pano_sequence = sceneio.read_image_folder(
+    "pano_frames",
+    projection="equirectangular",
+)
+
+# Lazy path sequences copy their encoded files exactly.
+sceneio.write_image_folder(sequence, "frames_copy")
+
+# Packed sequences are encoded transactionally one frame at a time.
+sceneio.write_image_folder(pano_sequence, "png_frames", frame_format="png")
+```
+
+The version-2 `sceneio_sequence.json` manifest preserves the homogeneous frame
+contract, exact optional nanosecond timing, and sequence-wide projection.
+Generic directory detection remains conservative: a plain folder requires the
+typed entry point or `format="image_sequence"`; a written folder is detected
+through its manifest.
 
 ### Format-to-memory matrix
 
@@ -143,6 +211,9 @@ silently change generic reads.
 | `avif` | `image` — Image | `sceneio.Image` |
 | `y4m` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
 | `webm` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `ivf` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `mjpeg` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
+| `mp4` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
 | `theora` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
 | `animated_webp` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |
 | `apng` | `image_sequence` — Image sequence | `sceneio.ImageSequence` |

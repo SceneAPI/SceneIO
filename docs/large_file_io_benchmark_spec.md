@@ -22,7 +22,7 @@ must answer four questions:
 This is deliberately a five-case closure run. It does not benchmark every
 registered format, tune codec internals, add a runtime dependency, download a
 general media framework, or establish machine-independent numeric pass/fail
-thresholds. `bench/io_bench/runner.py` owns the complete 74-format regression
+thresholds. `bench/io_bench/runner.py` owns the complete 77-format regression
 harness and `bench/bench_io.py` invokes its CLI; this benchmark supplies large, representative evidence for Gaussian,
 point-cloud, mesh, reconstruction, and dense-array workloads.
 

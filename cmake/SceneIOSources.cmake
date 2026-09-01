@@ -92,8 +92,12 @@ set(SCENEIO_RECONSTRUCTION_CODEC_SOURCES
   src/cpp/codecs/reconstruction/openmvg.cpp)
 
 set(SCENEIO_SEQUENCE_CODEC_SOURCES
+  src/cpp/codecs/sequences/av1_obu.cpp
   src/cpp/codecs/sequences/apng.cpp
   src/cpp/codecs/sequences/animated_webp.cpp
+  src/cpp/codecs/sequences/ivf.cpp
+  src/cpp/codecs/sequences/mjpeg.cpp
+  src/cpp/codecs/sequences/mp4.cpp
   src/cpp/codecs/sequences/theora.cpp
   src/cpp/codecs/sequences/webm.cpp
   src/cpp/codecs/sequences/y4m.cpp)
@@ -188,7 +192,11 @@ set(SCENEIO_CORE_SOURCES
   src/cpp/codecs/points/las.cpp
   src/cpp/codecs/points/laz.cpp
   src/cpp/codecs/sequences/apng.cpp
+  src/cpp/codecs/sequences/av1_obu.cpp
   src/cpp/codecs/sequences/animated_webp.cpp
+  src/cpp/codecs/sequences/ivf.cpp
+  src/cpp/codecs/sequences/mjpeg.cpp
+  src/cpp/codecs/sequences/mp4.cpp
   src/cpp/codecs/sequences/theora.cpp
   src/cpp/codecs/sequences/webm.cpp
   src/cpp/codecs/sequences/y4m.cpp

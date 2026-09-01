@@ -221,7 +221,11 @@ def test_checked_conversion_contract_pins_the_public_semantics():
             expected_conversion = "adapter"
         elif contract.status == "fixed":
             expected_decode = "preserve_fixed"
-            expected_encode = "unsupported" if format_id == "rtmv" else "require_fixed"
+            expected_encode = (
+                "unsupported"
+                if not sceneio.capabilities(format_id).can_write
+                else "require_fixed"
+            )
             expected_conversion = (
                 "direct"
                 if contract.conversion == "supported"

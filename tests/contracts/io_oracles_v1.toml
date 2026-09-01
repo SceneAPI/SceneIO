@@ -3,10 +3,10 @@ inventory_source = "sceneio.io._builtin_manifest.CANONICAL_BUILTIN_IDS"
 capability_source = "sceneio.capabilities"
 ledger_source = "tests/contracts/coordinate_conversions_v1.toml"
 ledger_table = "format_verification"
-expected_builtin_count = 74
-expected_readable_count = 74
-expected_writable_count = 73
-read_only_formats = ["rtmv"]
+expected_builtin_count = 77
+expected_readable_count = 77
+expected_writable_count = 75
+read_only_formats = ["mp4", "rtmv"]
 
 # A codec is qualified only when its normal test run executes evidence in both
 # file-to-record and record-to-file directions. Read-only formats must instead
@@ -33,6 +33,9 @@ lossy_or_quantized_formats = [
   "webp",
   "avif",
   "webm",
+  "ivf",
+  "mjpeg",
+  "mp4",
   "theora",
   "animated_webp",
   "animated_avif",
@@ -87,6 +90,9 @@ webp = { decode = "test_reads_pillow_lossless", encode = "test_pillow_reads_our_
 avif = { decode = "test_pillow_still_is_sceneio_readable", encode = "test_pillow_buffer_oracle_accepts_sceneio_output" }
 y4m = { decode = "test_independent_oracle_bidirectional_parity_for_every_layout", encode = "test_independent_oracle_bidirectional_parity_for_every_layout" }
 webm = { decode = "test_independent_simpleblock_writer_is_sceneio_readable", encode = "test_sceneio_writer_is_deterministic_and_oracle_decodable" }
+ivf = { decode = "test_native_writer_and_reader_have_independent_container_oracle_and_range", encode = "test_native_writer_and_reader_have_independent_container_oracle_and_range" }
+mjpeg = { decode = "test_native_round_trip_matches_independent_pillow_decode", encode = "test_native_round_trip_matches_independent_pillow_decode" }
+mp4 = { decode = "test_minimal_container_inspects_decodes_and_ranges", encode = "unsupported" }
 theora = { decode = "test_sceneio_write_is_valid_for_independent_ogg_oracle_and_remux", encode = "test_sceneio_write_is_valid_for_independent_ogg_oracle_and_remux" }
 animated_webp = { decode = "test_pillow_writer_is_sceneio_readable_bit_exact", encode = "test_sceneio_writer_is_lossless_and_oracle_readable" }
 apng = { decode = "test_pillow_writer_is_sceneio_readable_bit_exact", encode = "test_sceneio_writer_is_lossless_deterministic_and_oracle_readable" }

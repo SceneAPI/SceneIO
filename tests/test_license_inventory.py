@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 LICENSES = ROOT / "LICENSES"
 
 EXPECTED_NOTICES = {
+    "aom-patents.txt",
+    "aom.txt",
     "aousd-core-spec-supplemental.txt",
     "apache-arrow-license.txt",
     "apache-arrow-notice.txt",
@@ -76,6 +78,7 @@ EXPECTED_NOTICES = {
 FETCHCONTENT_NOTICE = {}
 
 VENDORED_NOTICE = {
+    "aom": "aom.txt",
     "cgltf": "cgltf.txt",
     "fast_float": "fast-float.txt",
     "lazperf": "lazperf.txt",
@@ -94,6 +97,46 @@ VENDORED_NOTICE = {
 }
 
 SOURCE_CLOSURE = {
+    "aom": {
+        "version": "3.13.1",
+        "commit": "d772e334cc724105040382a977ebb10dfd393293",
+        "archive_sha256": (
+            "b35239b1547516833fcb5bde03e49c94"
+            "5e93b8e7240a5fe7e19ada46aae69f32"
+        ),
+        "notice": "aom.txt",
+        "source_notice": "aom-patents.txt",
+        "source_notice_file": "PATENTS",
+        "license": "LICENSE",
+        "files": {
+            "LICENSE": (
+                "4764a286d8b2faeaf42f4418e7d7a28"
+                "d58fc8fd4d00a3d0a7f44b0a4099de7f2"
+            ),
+            "PATENTS": (
+                "661fb8e504744e95587b556b94a58343"
+                "448300606a41bea8c7a9b97125696e61"
+            ),
+            "aom-d772e334cc724105040382a977ebb10dfd393293.tar.gz": (
+                "b35239b1547516833fcb5bde03e49c94"
+                "5e93b8e7240a5fe7e19ada46aae69f32"
+            ),
+        },
+        "cmake_patterns": (
+            (
+                r'^set\(aom_ARCHIVE_DIR '
+                r'"\$\{PROJECT_SOURCE_DIR\}/src/cpp/third_party/aom"\)$'
+            ),
+            r'file\(SHA256 "\$\{aom_ARCHIVE\}" aom_ARCHIVE_SHA256\)',
+            r'^set\(CONFIG_AV1_HIGHBITDEPTH 1 CACHE STRING "" FORCE\)$',
+            (
+                r'add_subdirectory\(\s*"\$\{aom_SOURCE_DIR\}"\s*'
+                r'"\$\{CMAKE_CURRENT_BINARY_DIR\}/libaom"\s*'
+                r'EXCLUDE_FROM_ALL\)'
+            ),
+            r'^set_property\(TARGET aom PROPERTY C_VISIBILITY_PRESET hidden\)$',
+        ),
+    },
     "libvpx": {
         "version": "v1.16.0-178-g4780fac96",
         "commit": "4780fac9612992f8584227ea508c298fe8c01d05",

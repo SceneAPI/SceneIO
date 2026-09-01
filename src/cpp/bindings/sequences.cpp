@@ -5,6 +5,9 @@ void register_webm(nanobind::module_ &);
 void register_animated_webp(nanobind::module_ &);
 void register_apng(nanobind::module_ &);
 void register_theora(nanobind::module_ &);
+void register_ivf(nanobind::module_ &);
+void register_mjpeg(nanobind::module_ &);
+void register_mp4(nanobind::module_ &);
 
 namespace sio::bindings {
 namespace {
@@ -15,6 +18,9 @@ constexpr RegistrationDescriptor REGISTRATIONS[] = {
     {42, "apng", &::register_apng},
     {43, "webm", &::register_webm},
     {44, "theora", &::register_theora},
+    {45, "ivf", &::register_ivf},
+    {46, "mjpeg", &::register_mjpeg},
+    {47, "mp4", &::register_mp4},
 };
 
 constexpr CodecDescriptor CODECS[] = {
@@ -36,7 +42,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_webm"),
      symbols("write_webm", "write_webm_temporal"),
      symbols("read_webm_frames")},
-    {39,
+    {42,
      "animated_webp",
      "sequences",
      symbols("read_animated_webp"),
@@ -45,7 +51,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_animated_webp"),
      symbols("write_animated_webp"),
      symbols()},
-    {40,
+    {43,
      "apng",
      "sequences",
      symbols("read_apng"),
@@ -54,7 +60,7 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_apng"),
      symbols("write_apng"),
      symbols()},
-    {38,
+    {41,
      "theora",
      "sequences",
      symbols("read_theora"),
@@ -63,6 +69,33 @@ constexpr CodecDescriptor CODECS[] = {
      symbols("read_theora"),
      symbols("write_theora"),
      symbols("read_theora_frames")},
+    {38,
+     "ivf",
+     "sequences",
+     symbols("read_ivf"),
+     symbols("write_ivf"),
+     symbols("_inspect_ivf"),
+     symbols("read_ivf"),
+     symbols("write_ivf"),
+     symbols("read_ivf_frames")},
+    {39,
+     "mjpeg",
+     "sequences",
+     symbols("read_mjpeg"),
+     symbols("write_mjpeg"),
+     symbols("_inspect_mjpeg"),
+     symbols("read_mjpeg"),
+     symbols("write_mjpeg"),
+     symbols("read_mjpeg_frames")},
+    {40,
+     "mp4",
+     "sequences",
+     symbols("read_mp4"),
+     symbols(),
+     symbols("_inspect_mp4"),
+     symbols("read_mp4"),
+     symbols(),
+     symbols("read_mp4_frames")},
 };
 
 constexpr FamilyBindings FAMILY{

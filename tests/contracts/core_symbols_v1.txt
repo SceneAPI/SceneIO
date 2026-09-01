@@ -50,8 +50,11 @@ _inspect_dmb
 _inspect_euroc_imu
 _inspect_euroc_state
 _inspect_g2o
+_inspect_ivf
 _inspect_kalibr
 _inspect_ksplat_metadata
+_inspect_mjpeg
+_inspect_mp4
 _inspect_npy
 _inspect_nvm
 _inspect_off
@@ -103,6 +106,7 @@ hloc_correspondence_storage
 image
 image_sequence_packed
 image_sequence_paths
+image_sequence_with_projection
 image_sequence_yuv
 imu_calibration
 imu_sequence
@@ -162,6 +166,8 @@ read_gltf
 read_gltf_mesh
 read_gltf_primitive
 read_hdr
+read_ivf
+read_ivf_frames
 read_jpeg
 read_kalibr
 read_kitti
@@ -171,6 +177,10 @@ read_las
 read_las_points
 read_laz
 read_laz_points
+read_mjpeg
+read_mjpeg_frames
+read_mp4
+read_mp4_frames
 read_netpbm
 read_netpbm_window
 read_npy
@@ -255,12 +265,14 @@ write_gaussian_ply
 write_glb
 write_gltf
 write_hdr
+write_ivf
 write_jpeg
 write_kalibr
 write_kitti
 write_ksplat
 write_las
 write_laz
+write_mjpeg
 write_mtl
 write_netpbm
 write_npy

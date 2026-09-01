@@ -14,6 +14,7 @@
 #pragma once
 
 #include "io/common.hpp"
+#include "records/image_projection.hpp"
 
 // The three sample dtypes an Image can hold. Values are explicit so F16=3 can
 // be added later (PNG 16-bit, EXR) without renumbering.
@@ -32,7 +33,17 @@ struct Image {
     std::string alpha_mode = "none";   // "none" (C!=4) | "straight" | "premultiplied" (C==4)
     uint32_t maxval = 255;             // netpbm sample range 0..maxval — metadata, arrays never rescaled
 
+    // Optional spherical interpretation of this raster. ``unknown`` carries
+    // no projection claim. ``equirectangular`` maps the declared full canvas
+    // to longitude [-pi, pi) and latitude [pi/2, -pi/2] using COLMAP's
+    // +X-right, +Y-down, +Z-forward camera frame. The raster may be a crop of
+    // that canvas, matching Google Photo Sphere (GPano) metadata.
+    ImageProjectionMetadata projection_metadata;
+
     size_t count() const { return height * width * channels; }
+    bool is_full_sphere() const {
+        return projection_metadata.is_full_sphere(width, height);
+    }
 };
 
 inline const char *image_dtype_name(PixelType t) {
@@ -45,4 +56,17 @@ inline const char *image_dtype_name(PixelType t) {
 inline bool image_valid_channels(size_t c) { return c == 1 || c == 3 || c == 4; }
 inline bool image_valid_color_space(const std::string &s) {
     return s == "srgb" || s == "linear" || s == "gray" || s == "unknown";
+}
+
+inline void assign_image_projection(
+    Image &image, const std::string &projection,
+    std::optional<size_t> canvas_width = std::nullopt,
+    std::optional<size_t> canvas_height = std::nullopt,
+    std::optional<size_t> crop_left = std::nullopt,
+    std::optional<size_t> crop_top = std::nullopt,
+    const char *context = "image") {
+    assign_image_projection_metadata(
+        image.projection_metadata, image.width, image.height,
+        projection, canvas_width, canvas_height, crop_left, crop_top,
+        context);
 }

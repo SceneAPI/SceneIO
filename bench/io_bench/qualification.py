@@ -230,6 +230,19 @@ COMPARISON_QUALIFICATIONS = MappingProxyType(
             "independent EBML + Pillow/libwebp implementation",
             "bench/io_bench/oracles/sequences.py",
         ),
+        "ivf": _exemption(
+            "independent benchmark encode/decode throughput",
+            "tests/codecs/test_ivf.py",
+        ),
+        "mjpeg": _exemption(
+            "independent benchmark encode/decode throughput",
+            "tests/codecs/test_mjpeg.py",
+        ),
+        "mp4": _exemption(
+            "independent benchmark decode/inspect throughput",
+            "tests/codecs/test_mp4.py",
+            runner_kind="read_only_path",
+        ),
         "theora": _exemption(
             "direct pinned libtheora with independent Ogg framing oracle",
             "tests/codecs/test_theora.py",
@@ -725,6 +738,7 @@ def _validate_qualification_manifest() -> None:
             "special",
             "directory",
             "path",
+            "read_only_path",
         }:
             raise RuntimeError(
                 f"invalid runner kind for {format_id!r}"

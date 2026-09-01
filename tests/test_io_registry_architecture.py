@@ -42,7 +42,7 @@ def _implementation_callable(value):
 
 
 def test_builtin_manifest_is_exact_and_preserves_runtime_identity():
-    assert len(CANONICAL_BUILTIN_IDS) == 74
+    assert len(CANONICAL_BUILTIN_IDS) == 77
     assert tuple(registry.REGISTRY) == CANONICAL_BUILTIN_IDS
     assert tuple(codec.id for codec in registry.BUILTIN_DEFINITIONS) == (
         CANONICAL_BUILTIN_IDS
@@ -58,7 +58,7 @@ def test_families_partition_builtins_without_changing_dispatch_order():
     family_ids = [
         format_id for members in FAMILY_MEMBERS.values() for format_id in members
     ]
-    assert len(family_ids) == len(set(family_ids)) == 74
+    assert len(family_ids) == len(set(family_ids)) == 77
     assert set(family_ids) == set(CANONICAL_BUILTIN_IDS)
     assert set(BUILTIN_OWNERSHIP) == set(CANONICAL_BUILTIN_IDS)
     for family, members in FAMILY_MEMBERS.items():
@@ -183,12 +183,19 @@ def test_image_sequence_frame_dependencies_are_injected_at_runtime():
         builtins.__import__ = reject_upward_import
         try:
             assert adapter._image_extensions(access) == frozenset({".pgm"})
-            assert adapter._frame_metadata([frame], access) == (
+            scan = adapter._frame_metadata([frame], access)
+            assert (
+                scan.contract.height,
+                scan.contract.width,
+                scan.contract.channels,
+                scan.contract.dtype,
+            ) == (
                 2,
                 3,
                 1,
                 "uint8",
             )
+            assert scan.formats == ("netpbm",)
         finally:
             builtins.__import__ = original_import
         assert calls == [frame]
@@ -242,7 +249,7 @@ def test_repository_coverage_manifest_is_complete_and_resolvable():
     codecs = contract["codec"]
     assert contract["builtins"] == len(CANONICAL_BUILTIN_IDS)
     assert tuple(item["id"] for item in codecs) == CANONICAL_BUILTIN_IDS
-    assert len({item["id"] for item in codecs}) == 74
+    assert len({item["id"] for item in codecs}) == 77
 
     wheel_smoke = importlib.import_module("sceneio._wheel_smoke")
     benchmark_contract = json.loads(

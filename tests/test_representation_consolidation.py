@@ -35,14 +35,14 @@ def test_merge_boundary_stays_finite_during_consolidation() -> None:
 
 def test_io_capability_inventory_is_unchanged_by_consolidation() -> None:
     capabilities = sceneio.capabilities()
-    assert len(capabilities) == 74
-    assert sum(item.can_read for item in capabilities.values()) == 74
-    assert sum(item.can_write for item in capabilities.values()) == 73
-    assert sum(item.can_inspect for item in capabilities.values()) == 74
-    assert sum(bool(item.partial_selectors) for item in capabilities.values()) == 37
-    assert sum(len(item.partial_selectors) for item in capabilities.values()) == 43
-    assert sum(item.streams_read for item in capabilities.values()) == 74
-    assert sum(item.streams_write for item in capabilities.values()) == 71
+    assert len(capabilities) == 77
+    assert sum(item.can_read for item in capabilities.values()) == 77
+    assert sum(item.can_write for item in capabilities.values()) == 75
+    assert sum(item.can_inspect for item in capabilities.values()) == 77
+    assert sum(bool(item.partial_selectors) for item in capabilities.values()) == 40
+    assert sum(len(item.partial_selectors) for item in capabilities.values()) == 46
+    assert sum(item.streams_read for item in capabilities.values()) == 77
+    assert sum(item.streams_write for item in capabilities.values()) == 73
 
 
 def test_representation_surface_is_provisional_during_pre_1_reset() -> None:

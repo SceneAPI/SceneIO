@@ -571,6 +571,7 @@ char interlace_token(const std::string &value) {
 nb::bytes write_y4m(const ImageSequence &sequence) {
     validate_image_sequence(sequence, "y4m write");
     require_no_image_sequence_acquisition(sequence, "y4m write");
+    require_no_image_sequence_projection(sequence, "y4m write");
     if (sequence.storage_mode != "yuv_planar")
         throw std::invalid_argument(
             "y4m: writer requires planar YUV storage");

@@ -88,6 +88,9 @@ CODEC_CASE_DEFINITIONS = (
     _case("avif", "path", ()),
     _case("y4m", "buffer", ("frames",)),
     _case("webm", "buffer", ("frames",)),
+    _case("ivf", "buffer", ("frames",)),
+    _case("mjpeg", "buffer", ("frames",)),
+    _case("mp4", "path", ("frames",)),
     _case("theora", "buffer", ("frames",)),
     _case("animated_webp", "buffer", ()),
     _case("apng", "buffer", ()),
@@ -161,8 +164,8 @@ def _validate_case_definitions() -> None:
     }:
         raise RuntimeError("cross-codec fixture kinds are incomplete")
     if (len(BUFFER_CASES), len(PATH_CASES), len(DIRECTORY_CASES)) != (
-        52,
-        15,
+        54,
+        16,
         7,
     ):
         raise RuntimeError("cross-codec fixture partitions changed")

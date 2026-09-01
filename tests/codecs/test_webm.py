@@ -352,7 +352,7 @@ def _oracle_temporal_profile(data: bytes):
                             data[child_start:child_stop], "big", signed=True
                         )
                 references.append(reference)
-    assert codec in {"V_VP8", "V_VP9"}
+    assert codec in {"V_VP8", "V_VP9", "V_AV1"}
     assert matrix in {1, 6, 9}
     assert color_range in {1, 2}
     assert keyframes and keyframes[0]
@@ -514,7 +514,7 @@ def test_thread_modes_produce_identical_bytes_and_pixels():
     )
 
 
-@pytest.mark.parametrize("codec", ["vp8", "vp9"])
+@pytest.mark.parametrize("codec", ["vp8", "vp9", "av1"])
 def test_temporal_writer_has_independent_container_oracle_and_partial(codec):
     sequence = _temporal_sequence()
     source_planes = tuple(
@@ -575,7 +575,9 @@ def test_temporal_writer_has_independent_container_oracle_and_partial(codec):
     ]
 
 
-@pytest.mark.parametrize("profile", ["vp8-temporal", "vp9-temporal"])
+@pytest.mark.parametrize(
+    "profile", ["vp8-temporal", "vp9-temporal", "av1-temporal"]
+)
 def test_public_temporal_profiles_stream_and_own_decoded_planes(
     tmp_path, profile
 ):
@@ -607,7 +609,7 @@ def test_public_temporal_profiles_stream_and_own_decoded_planes(
         np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.parametrize("codec", ["vp8", "vp9"])
+@pytest.mark.parametrize("codec", ["vp8", "vp9", "av1"])
 def test_temporal_worker_modes_are_repeatable_and_decode_same_timeline(codec):
     sequence = _temporal_sequence(frames=10, height=48, width=64)
     one = bytes(_core.write_webm_temporal(sequence, codec=codec, threads=1))
@@ -640,7 +642,7 @@ def test_temporal_worker_modes_are_repeatable_and_decode_same_timeline(codec):
 def test_temporal_writer_refuses_unrepresented_options():
     sequence = _temporal_sequence()
     with pytest.raises(ValueError, match="codec"):
-        _core.write_webm_temporal(sequence, codec="av1")
+        _core.write_webm_temporal(sequence, codec="vp10")
     with pytest.raises(ValueError, match="threads"):
         _core.write_webm_temporal(sequence, threads=9)
     with pytest.raises(ValueError, match="keyframe_interval"):
@@ -679,7 +681,7 @@ def test_temporal_writer_refuses_unrepresented_options():
         )
 
 
-@pytest.mark.parametrize("codec", ["vp8", "vp9"])
+@pytest.mark.parametrize("codec", ["vp8", "vp9", "av1"])
 def test_temporal_rgb_conversion_preserves_input_and_exact_timing(codec):
     frames = _frames()
     snapshot = frames.copy()

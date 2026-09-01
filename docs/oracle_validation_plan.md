@@ -14,9 +14,11 @@ field boundary. Its original validation evidence remains unchanged.
 
 ## Outcome
 
-SceneIO already has a directional oracle ledger for all 74 built-in formats:
-74 readable formats, 73 writable formats, and RTMV as the only declared
-read-only format. This unit strengthens that evidence without expanding the
+The counts in this completed unit are checkpoint-specific; current inventory
+is reported in [`format_coverage.md`](format_coverage.md). SceneIO already had
+a directional oracle ledger for all 74 built-in formats: 74 readable formats,
+73 writable formats, and RTMV as the only declared read-only format. This unit
+strengthens that evidence without expanding the
 runtime dependency surface or reopening completed format coverage.
 
 The closure target is:

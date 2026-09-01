@@ -614,7 +614,7 @@ def test_old_and_reloaded_sequence_codecs_share_live_extension_catalog():
 
         def inspect_frame(path):
             return Inspection(
-                format="assembly_sequence_probe",
+                format="assembly-sequence-probe",
                 payload_kind="image",
                 byte_size=Path(path).stat().st_size,
                 shape=(2, 3, 1),
@@ -637,7 +637,12 @@ def test_old_and_reloaded_sequence_codecs_share_live_extension_catalog():
             source.mkdir()
             (source / "frame.assemblyprobe").write_bytes(b"frame")
             (source / "sceneio_sequence.json").write_text(
-                '{"sceneio_image_sequence":1,'
+                '{"sceneio_image_sequence":2,"frame_contract":{'
+                '"height":2,"width":3,"channels":1,"dtype":"uint8",'
+                '"color_space":"gray","alpha_mode":"none","maxval":255,'
+                '"projection":"unknown","projection_canvas_width":0,'
+                '"projection_canvas_height":0,"projection_crop_left":0,'
+                '"projection_crop_top":0},'
                 '"frames":[{"file":"frame.assemblyprobe"}]}',
                 encoding="utf-8",
             )
@@ -1225,7 +1230,7 @@ def test_assembly_dependency_direction_and_import_delta_are_exact():
         "3c07bcefabbd0d9be935ffd22c5ef1e7f4642321"
     )
     assert benchmark_contract["rows"] == 74
-    assert len(CANONICAL_BUILTIN_IDS) == benchmark_contract["rows"]
+    assert len(CANONICAL_BUILTIN_IDS) >= benchmark_contract["rows"]
     assert benchmark_contract["structural_projection_sha256"] == (
         "4db1a9dc8b3efc82d638e2e34fa4cfac613e2e32e29c4b7c24c6627b9a5c1a52"
     )

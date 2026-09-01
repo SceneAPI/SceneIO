@@ -55,6 +55,8 @@ BUFFER_CODEC_CASE_IDS = (
     "webp",
     "y4m",
     "webm",
+    "ivf",
+    "mjpeg",
     "theora",
     "animated_webp",
     "apng",
@@ -83,7 +85,7 @@ BUFFER_CODEC_CASE_IDS = (
 
 
 def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
-    """Build the 52 deterministic cases used by buffer behavior sweeps."""
+    """Build the 54 deterministic cases used by buffer behavior sweeps."""
     rng = np.random.default_rng(91)
     rgb = rng.integers(0, 256, (7, 9, 3), dtype=np.uint8)
     rgba = rng.integers(0, 256, (7, 9, 4), dtype=np.uint8)
@@ -344,6 +346,28 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         None,
         None,
     )
+    fixed_durations = np.full(4, 40_000_000, np.int64)
+    fixed_timestamps = np.arange(4, dtype=np.int64) * fixed_durations[0]
+    packed_sequence_ivf = _core.image_sequence_packed(
+        np.ascontiguousarray(packed_frames[..., :3]),
+        fixed_timestamps,
+        fixed_durations,
+        "srgb",
+        "none",
+        None,
+        None,
+        None,
+    )
+    packed_sequence_mjpeg = _core.image_sequence_packed(
+        np.ascontiguousarray(packed_frames[..., :3]),
+        empty_timing,
+        empty_timing,
+        "srgb",
+        "none",
+        None,
+        None,
+        None,
+    )
     tensor = rng.standard_normal((4, 5, 3)).astype(np.float32)
     tensors = _core.tensor_dict(
         {"a": tensor, "b": np.arange(9, dtype=np.int16)}
@@ -595,6 +619,13 @@ def build_buffer_codec_cases() -> tuple[BufferCodecCase, ...]:
         case("webp", _core.read_webp, _core.write_webp, image_rgba),
         case("y4m", _core.read_y4m, _core.write_y4m, image_sequence),
         case("webm", _core.read_webm, _core.write_webm, packed_sequence_webm),
+        case("ivf", _core.read_ivf, _core.write_ivf, packed_sequence_ivf),
+        case(
+            "mjpeg",
+            _core.read_mjpeg,
+            _core.write_mjpeg,
+            packed_sequence_mjpeg,
+        ),
         case(
             "theora",
             _core.read_theora,

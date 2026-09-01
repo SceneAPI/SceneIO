@@ -10,9 +10,9 @@ NumPy-only base import. Coordinate semantics are a checked cross-layer
 contract; see [`coordinate_conventions.md`](coordinate_conventions.md).
 
 <!-- sceneio-architecture-summary:start -->
-**Generated ownership contract:** The **74** built-ins span **11** registry families:
-**53** native, **4** hybrid, and **17** Python-owned rows. The compiled
-`_core.__codec_inventory__` projection therefore contains **57** native/hybrid rows;
+**Generated ownership contract:** The **77** built-ins span **11** registry families:
+**56** native, **4** hybrid, and **17** Python-owned rows. The compiled
+`_core.__codec_inventory__` projection therefore contains **60** native/hybrid rows;
 Python-owned rows remain outside that compiled inventory. The values come directly from
 `FAMILY_MEMBERS` and `BUILTIN_OWNERSHIP`.
 <!-- sceneio-architecture-summary:end -->
@@ -221,7 +221,7 @@ must ultimately be pinned under `src/cpp/third_party/`, built into `_core`, and
   Corrected local MSVC and Ubuntu builds produce `_core.pyd` and
   `_core.abi3.so`, respectively; the Windows binary imports `python3.dll` and
   the Unix binary has no libpython dependency. The exact-tree disconnected
-  MSVC sdist-to-wheel build, package inventory, license gate, and all-74
+  MSVC sdist-to-wheel build, package inventory, license gate, and all-77
   installed smoke form the final package gate. The release workflow
   makes every platform wheel consume that one verified sdist with hash-locked
   build inputs. Final run `30406706115` passes its MSVC, GCC 10, and AppleClang
@@ -395,7 +395,7 @@ returns `ColmapDatabase`.
 | Selector | Built-in codecs |
 |---|---|
 | `faces` | `off`, `ply_mesh`, `stl` |
-| `frames` | `animated_avif`, `image_sequence`, `rtmv`, `theora`, `webm`, `y4m` |
+| `frames` | `animated_avif`, `image_sequence`, `ivf`, `mjpeg`, `mp4`, `rtmv`, `theora`, `webm`, `y4m` |
 | `image_id` | `colmap_db`, `colmap_sparse`, `colmap_sparse_txt` |
 | `mesh_id` | `glb`, `gltf` |
 | `pair` | `colmap_db` |

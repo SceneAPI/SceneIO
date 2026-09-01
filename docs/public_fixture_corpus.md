@@ -9,11 +9,11 @@ route.
 
 ## Current closure
 
-As of 2026-08-04, all **74 built-in formats** have a fixture route:
+As of 2026-09-01, all **77 built-in formats** have a fixture route:
 
 - **13 direct formats** use an unchanged, content-hashed upstream artifact
   that SceneIO read locally;
-- **61 derived formats** have a specified deterministic route from a
+- **64 derived formats** have a specified deterministic route from a
   CC0/CC-BY seed through a separately pinned independent writer/parser; and
 - large real datasets and broader format profiles remain optional validation
   inputs, never normal-CI downloads.
@@ -48,13 +48,13 @@ The DX.GL archive is the coherent anchor rather than merely another image. Its
 one camera model and one scene. That makes reconstruction, dense-map, feature,
 match, track, and storage derivations internally checkable.
 
-## Deterministic routes for the other 61 formats
+## Deterministic routes for the other 64 formats
 
 | Fixture family | Formats | Seed and independent qualification route |
 |---|---|---|
 | Numeric/container stores | `npy`, `npz`, `safetensors`, `hdf5`, `zarr`, `parquet`, `arrow_ipc` | DX.GL/TUM numeric arrays → NumPy, h5py, Zarr, and Arrow writers |
 | Still images | `pfm`, `netpbm`, `jpeg`, `bmp`, `tga`, `hdr`, `webp`, `tiff` | CC0 RGB/depth arrays → Pillow/OpenEXR/tifffile or the existing independent format writer |
-| Sequences | `y4m`, `webm`, `theora`, `animated_webp`, `apng`, `animated_avif`, `image_sequence` | selected CC0 frames with exactly representable nanosecond timing → pinned sequence oracles |
+| Sequences | `y4m`, `webm`, `ivf`, `mjpeg`, `mp4`, `theora`, `animated_webp`, `apng`, `animated_avif`, `image_sequence` | selected CC0 frames with exactly representable nanosecond timing → pinned sequence/container oracles |
 | RTMV | `rtmv` | independently authored JSON around permissive EXR-derived channels; official NC data is not redistributed |
 | Meshes/scenes/volume | `ply_mesh`, `obj`, `stl`, `off`, `usd`, `usdz`, `openvdb` | CC0 Khronos/DX.GL geometry → trimesh, OpenUSD, and OpenVDB qualification writers with explicit axes/units |
 | Point text/PCD | `pcd`, `xyz`, `pts` | selected DX.GL cloud rows → independent PCL/Open3D/stdlib serializers |

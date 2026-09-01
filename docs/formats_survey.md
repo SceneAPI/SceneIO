@@ -11,9 +11,11 @@ caveats**, verified against primary sources; unconfirmed items are marked
 **⚠ verify**. **Not legal advice.**
 
 > **Implementation update (2026-08-29):** the original survey predates the
-> live registry. SceneIO 0.3.0 supports 74 bounded format ids, including image
-> directories, raw Y4M, animated WebP, APNG, optional still/animated AVIF,
-> video-only WebM VP8/VP9 and Ogg/Theora, NCore V4, and EuRoC/ASL datasets.
+> live registry. The current development branch supports 77 bounded format
+> ids, including image directories, raw Y4M/MJPEG, IVF and WebM VP8/VP9/AV1,
+> read-only classic AV1
+> MP4, animated WebP, APNG, optional still/animated AVIF, Ogg/Theora, NCore V4,
+> and EuRoC/ASL datasets.
 > AVIF uses a repository-owned adapter over Pillow/libavif with libaom and
 > dav1d; the base wheel remains NumPy-only. No FFmpeg/libav source, executable,
 > subprocess path, or runtime dependency is present. Temporal VP8/VP9 is
@@ -192,10 +194,12 @@ self-implementable.
 | **Y4M / animated WebP / APNG** | ✅ implemented | Direct repository-owned sequence paths with exact bounded timing and no general video framework |
 | **Animated AVIF** | ✅ implemented | Optional Pillow/libavif provider; mmap input, owned 8-bit frames, exact accepted timing, inspection, and frame ranges |
 | **VP8 all-keyframe in WebM** | ✅ implemented | Compatible default: repository-owned EBML plus pinned libwebp VP8; packed RGB, exact whole-ms timing, inspect/frame ranges/direct sink |
-| **Inter-frame VP8/VP9 in WebM** | ✅ implemented | Explicit temporal profiles use pinned libvpx; owned planar 8-bit 4:2:0, Colour matrix/range, keyframe-aware frame ranges, direct sink and worker lanes; no audio/subtitles/general media framework |
+| **Inter-frame VP8/VP9/AV1 in WebM** | ✅ implemented | Explicit temporal profiles use pinned libvpx/libaom; owned planar 4:2:0, normalized high-bit-depth decode, Colour matrix/range, keyframe-aware frame ranges, direct sink and worker lanes; no audio/subtitles/general media framework |
+| **VP8/VP9/AV1 in IVF** | ✅ implemented | Strict DKIF v0 with fixed rational timing, planar 4:2:0, normalized high-bit-depth decode, frame ranges, inspection, and direct VP8/VP9/AV1 writes |
 | **Ogg/Theora** | ✅ implemented | Pinned direct libogg/libtheora profile; planar 4:2:0, fixed rational timing, inspect/frame ranges/direct sink, independent Ogg framing/remux oracle, no audio or subtitles |
-| **MJPEG** | ➖ degenerate case | A stream of independent JPEG frames (libjpeg-turbo, permissive, no patents) — decodable without FFmpeg if ever needed |
-| **H.264 / H.265 / HEIC / ProRes / MP4 / MOV / AVI** | ❌ **out** | Patent pools (Via LA / Access Advance) and/or decode paths that mean FFmpeg. Extract frames upstream and feed SceneIO an image sequence |
+| **Raw MJPEG** | ✅ implemented | Concatenated complete JPEG frames with RGB/grayscale decode, RGB writing, frame ranges, and inspection; the container intentionally carries no timing or audio |
+| **Classic AV1 MP4/M4V/MOV** | ✅ read-only | Native ISO BMFF sample-table parsing, AV1 8/10/12-bit decode normalized to `uint8`, variable timing/edit lists, color/aspect metadata, and frame ranges; fragmented files and writing are refused |
+| **H.264 / H.265 / HEIC / ProRes / AVI and non-AV1 MP4/MOV** | ❌ **out** | Patent pools and/or decode paths that require a general media framework. Extract frames upstream and feed SceneIO an image sequence |
 
 **Uncertainties (§6):** libjpeg-turbo is a composite license (IJG + BSD-3 + zlib); AVIF v1.2.0 clause-level not re-checked; BMP/netpbm/PFM/.flo have no standards steward (self-implement).
 
@@ -322,7 +326,7 @@ assets, Kit SDK, and the `kaolin/non_commercial` module are NOT permissive**
 | **DNG / camera RAW** | image | decode needs **LGPL LibRaw** / Adobe SDK; RAW is proprietary-undocumented |
 | **HEIF / HEIC** | image | **HEVC patent-encumbered**; libheif is LGPL |
 | **JPEG 2000 / TGA** | image | niche |
-| **H.264 / H.265 / ProRes / MP4 / MOV / AVI** | video | **patent pools** and/or decode = **FFmpeg**; use image sequences |
+| **H.264 / H.265 / ProRes / AVI and non-AV1 MP4/MOV** | video | **patent pools** and/or decode requires a general media framework; use image sequences |
 | **NetCDF / LMDB / Protobuf / FlatBuffers / TFRecord / MessagePack / CBOR** | serialization | niche / schema-coupled / weak numeric typing for this domain |
 | **Lowe `.key`/`.sift`** | features | legacy; Lowe demo non-commercial |
 

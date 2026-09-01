@@ -47,7 +47,7 @@ Status terms:
 - **partial**: useful fields are supported, but a documented persisted field or
   companion file is not;
 - **planned**: in the lean closure implementation queue;
-- **adapter**: supported outside the 74-format registry because it is a
+- **adapter**: supported outside the 77-format registry because it is a
   workflow bundle rather than a standalone scene format;
 - **reference only**: inventoried for verification, not implemented.
 

@@ -1,9 +1,9 @@
 schema_version = 1
 catalog_date = "2026-08-04"
 catalog_purpose = "Licensed public data and deterministic derivation routes for every SceneIO built-in format."
-required_builtin_count = 74
+required_builtin_count = 77
 direct_format_count = 13
-derived_format_count = 61
+derived_format_count = 64
 
 # Network data is never required by the normal test suite. Artifacts are
 # downloaded only into an ignored cache, and every downloaded byte stream is
@@ -579,8 +579,8 @@ id = "derived_sequences"
 mode = "oracle_derived"
 source_ids = ["dxgl_apple_multiview"]
 oracle_source_ids = ["pillow"]
-formats = ["y4m", "webm", "theora", "animated_webp", "apng", "animated_avif", "image_sequence"]
-evidence = ["tests/codecs/test_y4m.py", "tests/codecs/test_webm.py", "tests/codecs/test_theora.py", "tests/codecs/test_animated_webp.py", "tests/codecs/test_apng.py", "tests/codecs/test_avif.py", "tests/codecs/test_image_sequence.py"]
+formats = ["y4m", "webm", "ivf", "mjpeg", "mp4", "theora", "animated_webp", "apng", "animated_avif", "image_sequence"]
+evidence = ["tests/codecs/test_y4m.py", "tests/codecs/test_webm.py", "tests/codecs/test_ivf.py", "tests/codecs/test_mjpeg.py", "tests/codecs/test_mp4.py", "tests/codecs/test_theora.py", "tests/codecs/test_animated_webp.py", "tests/codecs/test_apng.py", "tests/codecs/test_avif.py", "tests/codecs/test_image_sequence.py"]
 derivation = "Use selected CC0 frames with exactly representable integer-nanosecond timing and each pinned independent container oracle."
 qualification = "decoded frame order, pixels/fidelity, timing, loop count, and metadata match the established sequence contracts"
 

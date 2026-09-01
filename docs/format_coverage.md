@@ -19,7 +19,7 @@ mixed 3D-CV scene profile is in
 [`usd_3d_cv_implementation_plan.md`](usd_3d_cv_implementation_plan.md).
 
 Coordinate interpretation is tracked separately from payload coverage. The
-exact 74-format coordinate manifest, COLMAP canonical target, HLoc pixel-center
+exact 77-format coordinate manifest, COLMAP canonical target, HLoc pixel-center
 distinction, explicit conversion surface, and verification rules are in
 [`coordinate_conventions.md`](coordinate_conventions.md). Capability discovery,
 inspection, and decoded records expose the same immutable convention contract.
@@ -30,9 +30,9 @@ scale source/unit, coordinate source, supported conversion, refusal behavior,
 and executable evidence.
 
 Public data provenance is a separate checked contract. The
-[`public fixture corpus`](public_fixture_corpus.md) gives every one of the 74
+[`public fixture corpus`](public_fixture_corpus.md) gives every one of the 77
 built-ins exactly one primary route: 13 formats use unchanged content-hashed
-upstream artifacts that were read locally, while 61 use deterministic
+upstream artifacts that were read locally, while 64 use deterministic
 oracle-derived files from CC0/CC-BY seeds. Large real bundles and broader
 profiles are optional validation data; normal CI remains offline.
 
@@ -50,15 +50,27 @@ The final acceptance matrix remains in the
 [`finite closure checklist`](remaining_3dcv_profile_checklist.md), and the
 ordered execution evidence is preserved in the
 [`completed-plan archive`](plans/completed/remaining_gap_implementation_plan_2026-08-29.md).
-The live registry contains 74 formats.
+The live registry contains 77 formats.
 
 <!-- sceneio-inventory-summary:start -->
-**Generated registry contract:** SceneIO has **74 built-in formats**: **64**
-single-file, **5** directory, and **5** multi-file containers. **74** are readable,
-**73** writable, and **74** inspectable; **37** formats expose **43** bounded partial
-selectors. **74** provide streaming reads and **71** provide streaming writes. The
+**Generated registry contract:** SceneIO has **77 built-in formats**: **67**
+single-file, **5** directory, and **5** multi-file containers. **77** are readable,
+**75** writable, and **77** inspectable; **40** formats expose **46** bounded partial
+selectors. **77** provide streaming reads and **73** provide streaming writes. The
 values come directly from `CANONICAL_BUILTIN_IDS` and `sceneio.capabilities()`.
 <!-- sceneio-inventory-summary:end -->
+
+The native moving-image subset is FFmpeg-free and profile-bounded. IVF and
+WebM support VP8, VP9, and AV1 reads/writes; raw MJPEG supports untimed JPEG
+frame reads/writes; classic non-fragmented MP4/M4V/MOV supports AV1 reads;
+animated AVIF remains provider-backed. Audio, subtitles, fragmented MP4,
+non-AV1 ISO BMFF tracks, and MP4 writing are explicit refusals.
+
+Still-image panoramas use the canonical `Image` record. JPEG automatically
+reads, writes, and inspects full or cropped Google Photo Sphere GPano XMP;
+metadata-free rasters use `read_equirectangular()` so a 2:1 aspect ratio is
+never treated as proof of spherical geometry. Pixel/ray conversion and
+COLMAP `EQUIRECTANGULAR` camera construction share COLMAP's exact convention.
 
 Current tables: [data structures](#data-structures-memory-records),
 [formats](#formats-codecs), [infrastructure](#infrastructure--capabilities), and
@@ -67,7 +79,7 @@ Current tables: [data structures](#data-structures-memory-records),
 Everything marked ✅ is implemented by the compiled `sceneio._core` or by a
 repository-owned adapter around a separately installed, optimized permissive
 provider. SceneIO owns the schema, convention guards, public mapping, and tests
-in both cases. SceneIO 0.4.0 packages the complete current registry.
+in both cases. The development package builds the complete current registry.
 
 ## Validation history
 
@@ -120,10 +132,10 @@ complete and format capabilities are unchanged.
 
 > **Independent-oracle contract:** `tests/contracts/io_oracles_v1.toml` now
 > makes that evidence a repository-wide I/O gate rather than only a
-> coordinate-review note. Every one of the 74 built-ins must retain a named
+> coordinate-review note. Every one of the 77 built-ins must retain a named
 > independent implementation or specification-derived parser, executable
 > decode evidence, and executable encode evidence when writable. The contract
-> cross-checks the live 74-readable/73-writable capability surface and the 15
+> cross-checks the live 77-readable/75-writable capability surface and the 18
 > formats whose comparison is semantic or quantization-bounded rather than a
 > false source-byte equality claim. USD and USDZ include their dedicated
 > Gaussian schema suite in addition to their mesh/scene suites. Gaussian
@@ -1253,8 +1265,8 @@ SoA, zero-copy to numpy/torch (DLPack), conventions carried as metadata.
 | `GaussianCloud` | `splat` | ✅ record / ⬜ logical DataType | The codec payload kind is `splat`; adding a cross-repository logical DataType remains **Phase‑C** |
 | `PosedViewSet` | `camera` + poses | ✅ record / ⬜ logical DataType | SE3/view + optional `Camera` intrinsics; per-source convention tags (order/direction/axis/scale); the codec payload kind is `posed_views` |
 | `Camera` | (shared) | ✅ | COLMAP model ids 0-17 + exact `params[]`; reused by `Reconstruction` and `PosedViewSet` |
-| `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, owner-safe zero-copy `pixels` |
-| `ImageSequence` | `image_sequence` | ✅ | owned lazy encoded-frame paths, owned uint8 planar Y/U/V frames, or owned packed uint8/uint16/float32 frames; exact optional int64-ns frame, exposure, and rolling-readout timing; declared timestamp reference/direction; dimensions, color/alpha/maxval, loop, background, chroma sampling/siting, range, matrix, interlace, rate, and aspect metadata; writers that cannot represent acquisition timing refuse it |
+| `Image` | `image_sequence` elem | ✅ | interleaved HxWxC (u8/u16/f32), color_space/alpha_mode/maxval metadata, canonical unknown/equirectangular projection with full-canvas and crop geometry, owner-safe zero-copy `pixels` |
+| `ImageSequence` | `image_sequence` | ✅ | owned lazy encoded-frame paths, owned uint8 planar Y/U/V frames, or owned packed uint8/uint16/float32 frames; one canonical unknown/equirectangular full-canvas/crop contract across all frames; exact optional int64-ns frame, exposure, and rolling-readout timing; declared timestamp reference/direction; dimensions, color/alpha/maxval, loop, background, chroma sampling/siting, range, matrix, interlace, rate, and aspect metadata; writers that cannot represent projection or acquisition timing refuse it |
 | `TensorDict` | (named arrays) | ✅ | dict‑like, 12 numpy dtypes (dtype‑erased), zero‑copy views; backs NPZ and mapped safetensors |
 | `PointCloud` | `point_cloud` (new) | ✅ | xyz + rgb/rgb16 + normals + intensity, optional organized width/height, acquisition viewpoint, and validated lossless LAS waveform sidecar; additive float display RGB/opacity, widths, signed ids, velocity, acceleration, and display color space are reserved for rich scene formats; backs `.xyz`, count-prefixed `.pts`, point `.ply`, PCD, plain `.las`, and `.laz` |
 | `DepthMap` | `depth_map` | ✅ | scalar f32 depth + scale/unit/invalid + confidence; backs scalar DMB, explicit typed PFM/PNG/EXR adapters, and COLMAP MVS camera-Z/nonpositive depth |
@@ -1361,7 +1373,7 @@ native build pattern (miniz, zstd, nlohmann/json, fast_float) — so they needed
 | Format | Record | Native backend (license) | Status |
 |---|---|---|---|
 | PNG (incl. 16‑bit depth) | `Image` (raw) + `DepthMap` (typed) | lodepng (zlib) — self‑contained inflate | ✅ R+W; raw palette/RGB/RGBA API unchanged; typed grayscale uint16 exact widening/guarded write with explicit encoding |
-| JPEG (baseline+progressive) | `Image` | stb (public domain) | ✅ R (gray+RGB) / W (RGB‑only); pillow oracle; lossy |
+| JPEG (baseline+progressive) | `Image` | stb (public domain) | ✅ R (gray+RGB) / W (RGB‑only); full/cropped Google Photo Sphere GPano equirectangular XMP read/write/inspect; pillow oracle; lossy |
 | Radiance `.hdr` | `Image`(f32) | stb (public domain) | ✅ R+W; numpy RGBE oracle; lossy encode |
 | OpenEXR | `Image`(f32) (raw) + `DepthMap` (typed) | tinyexr (BSD) — reuses our miniz | ✅ R+W; OpenEXR‑python oracle; HALF→FLOAT, premult‑alpha, PIZ/ZIP/RLE; explicit single-channel typed depth |
 | plain `.las` | `PointCloud` | **none** — hand‑parsed binary, like colmap `.bin` | ✅ R+W; laspy oracle; formats 0‑10, origin+rgb16, georef rebase; formats 4/5/9/10 preserve internal waveform descriptor VLRs, packet EVLR, references, and opaque point fields in a sidecar |
@@ -1414,7 +1426,7 @@ public-domain SQLite amalgamation statically linked into `_core`.
 | `g2o` | `PoseGraph` | R+W | independent strict parser + g2o BSD-3 source semantics | `VERTEX_SE3:QUAT`, `EDGE_SE3:QUAT`, `FIX`; XYZW; exact upper-triangle information; unsupported mixed types/parameters reject |
 | `colmap_db` | `ColmapDatabase` (`FeatureSet` + `CorrespondenceGraph` + nested companions) | inspect, R+W all four exact profiles, partial | stdlib **sqlite3** + **pycolmap 4.1.1** | exact structural identity and selected-profile writes for stock 3.13/4.1.1/current and owned MAXX; decoded records preserve their exact profile, while newly constructed records use the package-owned hybrid default; stock rig/frame/prior, current recovered cameras, and MAXX descriptors/colors/scores/provenance/quality/extended priors/markers/metadata-only video/ownership round-trip; conversion reports enumerate identity changes and incompatible fields before destination access |
 | `laz` | `PointCloud` | R+W | **laspy 2.7 + lazrs 0.8.1** | pinned LAZperf 3.4.0; standard formats 0–3/6–8; strict LASzip VLR/chunk extents; chunk-aware ranges; seekable streaming sink |
-| `image_sequence` | `ImageSequence` | R+W | independent manifest/PGM fixtures + existing image-codec parity suites | flat image directories; deterministic natural order or strict versioned manifest; lazy owned paths; exact optional timing; heterogeneous frames reject; transactional bounded-copy writer; frame ranges |
+| `image_sequence` | `ImageSequence` | R+W | registry-driven parity across every `Image` codec + independent manifest/PGM fixtures | flat image directories; semantic content detection rejects shared-extension animations and TIFF collections; deterministic natural order or strict version-2 frame-contract manifest; lazy owned paths or typed transactional packed-frame encoding; exact optional timing and sequence-wide equirectangular geometry; heterogeneous contracts reject; frame ranges |
 | `y4m` | `ImageSequence` | R+W | independent Python parser/writer + exact golden bytes | original dependency-free YUV4MPEG2 subset; uint8 mono/4:2:0/4:2:2/4:4:4 planar frames, odd dimensions, exact rational timing, mmap, streaming sink, inspect, and frame ranges; no RGB conversion or video-framework dependency |
 | `webm` | `ImageSequence` | R+W | independent EBML mux/demux + Pillow/libwebp raw-VP8 oracle + pinned official libvpx API in `tests/codecs/test_webm.py` | repository-owned video-only WebM container; compatible packed-RGB VP8 keyframe profile plus temporal VP8/VP9 planar uint8 4:2:0 profiles selected by `sceneio.write(..., profile=...)`; explicit matrix/range, exact whole-ms timing, keyframe-aware frame ranges, mmap, direct sink, inspect, and worker lanes; alpha, audio, subtitles, chapters, lacing, HDR, and embedded metadata refuse |
 | `theora` | `ImageSequence` | R+W | pinned libtheora payload API + independent Ogg page/CRC/lacing/remux oracle in `tests/codecs/test_theora.py` | direct libogg/libtheora video-only profile; progressive uint8 planar 4:2:0, fixed rational timing, pixel aspect, mmap, direct sink, inspect, and frame ranges; comments, multiple streams, audio/subtitles, tagged color spaces, other chroma layouts, high bit depth, and interlacing refuse |
@@ -1498,20 +1510,20 @@ schedule retained · ✅ compiler-instrumented native reliability workflow passe
 its complete and focused jobs at `a5e7fa4` · ⬜ randomized oracle-triangulated
 fuzzing · ✅ direct file-sink writes · ✅ bounded measured-path workers
 (XYZ/LAS/LAZ/EXR/PNG16/WebP lossless) · ✅ partial/lazy reads (`inspect` covers all
-74; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
+77; bounded pixel/point/face/mesh/primitive/state/frame/COLMAP-image/COLMAP-pair/tensor
 subsets cover capable containers) · ⬜ GPU-via-DLPack (torch-cuda/cupy) · ✅
-expanded 74-format benchmark/oracles.
+expanded 77-format benchmark/oracles.
 
 ## Infrastructure & capabilities
 
 | Piece | Status | Notes |
 |---|---|---|
 | nanobind + scikit‑build‑core build | ✅ | abi3/cp312, `NB_STATIC`; `Python::SABIModule`, `nanobind-static-abi3`, and the platform suffix are configure-checked; local Windows emits `_core.pyd` against `python3.dll`, Ubuntu emits `_core.abi3.so` without libpython |
-| cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, all-74 installed smoke, per-wheel inventory, and protected-tag publication in `publish.yml`; `v0.3.0` Release run [`33269098190`](https://github.com/SceneAPI/SceneIO/actions/runs/33269098190) published the sdist and all three wheel targets |
+| cibuildwheel release path | ✅ | one verified sdist feeds Linux/macOS/Windows wheels; locked build inputs, manifest-driven all-77 installed smoke, per-wheel inventory, and protected-tag publication in `publish.yml`; `v0.3.0` Release run [`33269098190`](https://github.com/SceneAPI/SceneIO/actions/runs/33269098190) published the sdist and all three wheel targets |
 | CI parity (oracles in CI) | ✅ | the exact 0.3.0 tag passed release, CI, and sanitizer gates; the post-release 103-representation correction passes main [CI `33271892348`](https://github.com/SceneAPI/SceneIO/actions/runs/33271892348) and [Sanitizers `33271892375`](https://github.com/SceneAPI/SceneIO/actions/runs/33271892375) |
-| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 74; bounded partial hooks are capability-specific |
-| Repo-maintained stable codec adapters | ✅ | all 74 adapters live in `src/cpp` / `src/sceneio`; 71 writable adapters stream directly to paths, RTMV is read-only, and the two AVIF writers use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
-| Offline native-source closure | ✅ | all selected native sources—including libwebp 1.5.0—are stored in-tree and the production CMake graph has no native-source fetch; local exact-tree proof plus final MSVC, GCC 10, and AppleClang sdist-to-wheel execution and artifact inspection pass |
+| Codec registry + `read`/`write`/`inspect`/`read_partial`/`detect` | ✅ | inspection covers all 77; bounded partial hooks are capability-specific |
+| Repo-maintained stable codec adapters | ✅ | all 77 adapters live in `src/cpp` / `src/sceneio`; 73 writable adapters stream directly to paths, RTMV and MP4 are read-only, and the two AVIF writers use the provider's completed output buffer; optional optimized storage/parser providers remain separately installed |
+| Offline native-source closure | ✅ local | all selected native sources—including libwebp 1.5.0 and libaom 3.13.1—are stored in-tree and the production CMake graph has no native-source fetch; local MSVC build, license inventory, and installed smoke pass, while GCC 10 and AppleClang wheel execution remain hosted CI gates for this addition |
 | Zero‑copy numpy + torch (DLPack) | ✅ | validated per codec |
 | Conventions‑as‑metadata + write guards | ✅ | record‑don't‑convert enforced |
 | Parity kit (`sceneio.testing.parity`) | ✅ | cross‑impl + round‑trip + convention pins |
@@ -1569,12 +1581,15 @@ incremental.
 | `hloc_features` | file | yes | yes | yes | - | yes | yes | no | h5py |
 | `hloc_matches` | file | yes | yes | yes | - | yes | yes | no | h5py |
 | `image_sequence` | directory | yes | yes | yes | frames | yes | yes | no | - |
+| `ivf` | file | yes | yes | yes | frames | yes | yes | yes | - |
 | `jpeg` | file | yes | yes | yes | - | yes | yes | yes | - |
 | `kalibr` | file | yes | yes | yes | - | yes | yes | no | - |
 | `kitti` | file | yes | yes | yes | - | yes | yes | no | - |
 | `ksplat` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `las` | file | yes | yes | yes | points | yes | yes | yes | - |
 | `laz` | file | yes | yes | yes | points | yes | yes | yes | - |
+| `mjpeg` | file | yes | yes | yes | frames | yes | yes | yes | - |
+| `mp4` | file | yes | no | yes | frames | yes | no | yes | - |
 | `ncore_v4` | multi_file | yes | yes | yes | - | yes | yes | no | zarr, cbor2 |
 | `netpbm` | file | yes | yes | yes | window | yes | yes | no | - |
 | `npy` | file | yes | yes | yes | - | yes | yes | no | - |

@@ -22,9 +22,9 @@ documentation checklist is
 ## Current repository snapshot
 
 <!-- sceneio-architecture-summary:start -->
-**Generated ownership contract:** The **74** built-ins span **11** registry families:
-**53** native, **4** hybrid, and **17** Python-owned rows. The compiled
-`_core.__codec_inventory__` projection therefore contains **57** native/hybrid rows;
+**Generated ownership contract:** The **77** built-ins span **11** registry families:
+**56** native, **4** hybrid, and **17** Python-owned rows. The compiled
+`_core.__codec_inventory__` projection therefore contains **60** native/hybrid rows;
 Python-owned rows remain outside that compiled inventory. The values come directly from
 `FAMILY_MEMBERS` and `BUILTIN_OWNERSHIP`.
 <!-- sceneio-architecture-summary:end -->

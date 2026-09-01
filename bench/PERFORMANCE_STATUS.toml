@@ -4,7 +4,7 @@ validated_implementation = "a5e7fa4498728eb1bd166f9af9e37b3eda779e17"
 provisional_definition = "implemented and correctness-tested, but backend qualification is incomplete; evidence_gaps states what remains"
 r6_release_policy = "verified current backends are accepted as the R6 release baseline; provisional candidate-comparison gaps remain an optional post-R6 backlog and do not claim qualification"
 r6_release_decision = "user-directed lean full-closure plan, 2026-07-28"
-r6_unmeasured_profile_policy = "14 specialized provisional rows are accepted for correctness and compatibility only; R6 makes no profile-specific performance claim for them"
+r6_unmeasured_profile_policy = "25 specialized provisional rows are accepted for correctness and compatibility only; R6 makes no profile-specific performance claim for them"
 
 [status_definitions]
 qualified = "candidate comparison, fidelity checks, fixtures, and required toolchain evidence are complete"
@@ -420,10 +420,40 @@ id = "webm"
 family = "sequences"
 adapter = "repo"
 implementation_owner = "native"
-sources = ["src/cpp/codecs/sequences/webm.cpp", "src/cpp/third_party/libwebp", "src/cpp/third_party/libvpx"]
+sources = ["src/cpp/codecs/sequences/webm.cpp", "src/cpp/codecs/sequences/av1_obu.cpp", "src/cpp/third_party/libwebp", "src/cpp/third_party/libvpx", "src/cpp/third_party/aom"]
 source_suite = "tests/codecs/test_webm.py"
 documentation = "docs/format_coverage.md"
-accepted_subset = ["vp8", "vp8_interframes", "vp9", "uint8_rgb", "uint8_yuv420", "progressive", "all_keyframe", "temporal_compression", "whole_millisecond_timing", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+accepted_subset = ["vp8", "vp8_interframes", "vp9", "av1", "high_bit_depth_decode", "uint8_normalized_output", "uint8_rgb", "uint8_yuv420", "progressive", "all_keyframe", "temporal_compression", "whole_millisecond_timing", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+
+[[codec]]
+id = "ivf"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/ivf.cpp", "src/cpp/codecs/sequences/av1_obu.cpp", "src/cpp/third_party/libvpx", "src/cpp/third_party/aom"]
+source_suite = "tests/codecs/test_ivf.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["ivf_v0", "vp8", "vp9", "av1", "uint8_yuv420", "high_bit_depth_decode", "uint8_normalized_output", "fixed_rational_timing", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+
+[[codec]]
+id = "mjpeg"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/mjpeg.cpp", "src/cpp/third_party/stb"]
+source_suite = "tests/codecs/test_mjpeg.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["raw_concatenated_jpeg", "uint8_grayscale_decode", "uint8_rgb", "untimed", "frame_ranges", "metadata_only_inspect", "direct_streaming_write"]
+
+[[codec]]
+id = "mp4"
+family = "sequences"
+adapter = "repo"
+implementation_owner = "native"
+sources = ["src/cpp/codecs/sequences/mp4.cpp", "src/cpp/codecs/sequences/av1_obu.cpp", "src/cpp/third_party/aom"]
+source_suite = "tests/codecs/test_mp4.py"
+documentation = "docs/format_coverage.md"
+accepted_subset = ["read_only", "classic_iso_bmff", "av1", "nonfragmented", "source_bit_depth_8_10_12", "uint8_normalized_output", "monochrome", "yuv420", "yuv422", "yuv444", "variable_frame_timing", "composition_offsets", "edit_lists", "frame_ranges", "metadata_only_inspect"]
 
 [[codec]]
 id = "theora"
@@ -3054,6 +3084,236 @@ correctness_evidence = ["tests/codecs/test_webm.py"]
 benchmark_evidence = ["bench/BASELINE.md"]
 candidate_backends = []
 evidence_gaps = ["three-platform package validation"]
+
+[[operation]]
+codec_id = "webm"
+profile = "av1-temporal"
+direction = "encode"
+settings = { codec = "av1", layout = "temporal_yuv420", dtype = "uint8", quality = 82, threads = "auto", speed = 6, keyframe_interval = 120 }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libaom reference API"
+fixture = "webm:av1-temporal"
+backend = "libaom"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/aom"
+backend_version = "3.13.1-d772e334cc724105040382a977ebb10dfd393293"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "webm"
+profile = "av1-temporal"
+direction = "decode"
+settings = { codec = "av1", layout = "temporal_yuv420", output = "uint8_normalized", threads = "auto" }
+fidelity = "lossy"
+comparator = "independent EBML oracle + pinned official libaom reference API"
+fixture = "webm:av1-temporal"
+backend = "libaom"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/aom"
+backend_version = "3.13.1-d772e334cc724105040382a977ebb10dfd393293"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_webm.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ivf"
+profile = "vp8"
+direction = "encode"
+settings = { codec = "vp8", layout = "yuv420", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent DKIF parser + pinned official libvpx reference API"
+fixture = "ivf:vp8"
+backend = "libvpx-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ivf.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ivf"
+profile = "vp8"
+direction = "decode"
+settings = { codec = "vp8", layout = "yuv420", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent DKIF parser + pinned official libvpx reference API"
+fixture = "ivf:vp8"
+backend = "libvpx-vp8"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ivf.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ivf"
+profile = "vp9"
+direction = "encode"
+settings = { codec = "vp9", layout = "yuv420", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent DKIF parser + pinned official libvpx reference API"
+fixture = "ivf:vp9"
+backend = "libvpx-vp9"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ivf.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ivf"
+profile = "vp9"
+direction = "decode"
+settings = { codec = "vp9", layout = "yuv420", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent DKIF parser + pinned official libvpx reference API"
+fixture = "ivf:vp9"
+backend = "libvpx-vp9"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/libvpx"
+backend_version = "v1.16.0-178-g4780fac96"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ivf.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ivf"
+profile = "av1"
+direction = "encode"
+settings = { codec = "av1", layout = "yuv420", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent DKIF parser + pinned official libaom reference API"
+fixture = "ivf:av1"
+backend = "libaom"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/aom"
+backend_version = "3.13.1-d772e334cc724105040382a977ebb10dfd393293"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ivf.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "ivf"
+profile = "av1"
+direction = "decode"
+settings = { codec = "av1", layout = "yuv420", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent DKIF parser + pinned official libaom reference API"
+fixture = "ivf:av1"
+backend = "libaom"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/aom"
+backend_version = "3.13.1-d772e334cc724105040382a977ebb10dfd393293"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_ivf.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "mjpeg"
+profile = "default"
+direction = "encode"
+settings = { framing = "raw_concatenated_jpeg", layout = "rgb", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent JPEG frame scanner + Pillow"
+fixture = "mjpeg:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_mjpeg.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "mjpeg"
+profile = "default"
+direction = "decode"
+settings = { framing = "raw_concatenated_jpeg", layout = "rgb", dtype = "uint8" }
+fidelity = "lossy"
+comparator = "independent JPEG frame scanner + Pillow"
+fixture = "mjpeg:default"
+backend = "stb"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/stb"
+backend_version = "31c1ad37456438565541f4919958214b6e762fb4"
+backend_patch_set = "sceneio-stb-3-local-patches-v1"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_mjpeg.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
+
+[[operation]]
+codec_id = "mp4"
+profile = "default"
+direction = "encode"
+settings = { profile = "read_only" }
+fidelity = "not applicable"
+comparator = "read-only classic AV1 ISO BMFF profile"
+fixture = "mp4:default"
+backend = "libaom"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/aom"
+backend_version = "3.13.1-d772e334cc724105040382a977ebb10dfd393293"
+transport_status = "not_applicable"
+status = "not_applicable"
+correctness_evidence = ["tests/codecs/test_mp4.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["the native MP4 profile is intentionally read-only"]
+
+[[operation]]
+codec_id = "mp4"
+profile = "default"
+direction = "decode"
+settings = { container = "classic_iso_bmff", codec = "av1", output = "uint8_normalized" }
+fidelity = "lossy"
+comparator = "independent ISO BMFF sample-table parser + pinned official libaom reference API"
+fixture = "mp4:default"
+backend = "libaom"
+backend_owner = "vendored"
+backend_source = "src/cpp/third_party/aom"
+backend_version = "3.13.1-d772e334cc724105040382a977ebb10dfd393293"
+transport_status = "qualified"
+status = "provisional"
+correctness_evidence = ["tests/codecs/test_mp4.py"]
+benchmark_evidence = []
+candidate_backends = []
+evidence_gaps = ["profile-specific current-backend measurement missing", "candidate comparison on all required toolchains"]
 
 [[operation]]
 codec_id = "theora"

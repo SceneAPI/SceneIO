@@ -6,13 +6,16 @@
   },
   "codec_ast_sha256": {
     "y4m": "d60697c09a277760e326397fdd766045fae91d35060d3cfcdbd2a854b9b5dab7",
-    "webm": "785295a461b7b863c454e0e234a4e17c5452bed292e1b05209521310cbec31f6",
+    "webm": "6f8200c2bd5dfe16534043cba810dc66ab48923733d7e4a59322604615fb6f6b",
+    "ivf": "8fdd19ad968b567ab1020f6147c531d8baae70ae32c2d0903a9cd08ba3596a59",
+    "mjpeg": "23f277112f8897a52b2e1d34a053b2de39347ab616dd78cf3651f5913629c24c",
+    "mp4": "8b14cdcc640ac940a0f6f6dd4d542936240057ee8e3ed20d69af1ab18c11318e",
     "theora": "f7ca9f66758cf2bf13d9be4319e1914040beaafe5d4b401d9129bee293918826",
     "animated_webp": "a4dd66cfdfbf597a237821728b22b5790eaef554b8faf504007822ea1550f9db",
     "apng": "3288bd352ccf46a514bb1946cec26d76355e276098ee7cc23770dcdce59679b9",
     "animated_avif": "5cb2c2630e198774d8d9d542da7c7f31494ed37d06e3059c27fedb995c0daea6",
     "rtmv": "a55384b0efbe4970ee6691d866986dfa8841843fdb628da422df4cb37e16f3ca",
-    "image_sequence": "938264c5bcc830ef227e4a97ea42de2253fd8cdf5dcc1eb3e5d2da8b997eb4c5"
+    "image_sequence": "835029751afa2c222277004aa966981940e2fddd3572f74455ad092e477b696b"
   },
   "y4m": {
     "mono": {
@@ -134,11 +137,26 @@
           "storage_mode": "encoded_paths",
           "has_timing": false,
           "manifest": false,
+          "manifest_version": null,
           "frame_names": [
             "frame1.pgm",
             "frame2.pgm",
             "frame10.pgm"
-          ]
+          ],
+          "frame_formats": [
+            "netpbm",
+            "netpbm",
+            "netpbm"
+          ],
+          "color_space": "gray",
+          "alpha_mode": "none",
+          "maxval": 255,
+          "projection": "unknown",
+          "projection_canvas_width": 0,
+          "projection_canvas_height": 0,
+          "projection_crop_left": 0,
+          "projection_crop_top": 0,
+          "is_full_sphere": false
         }
       },
       "full": {
@@ -153,6 +171,14 @@
         "width": 3,
         "channels": 1,
         "frame_dtype": "uint8",
+        "color_space": "gray",
+        "alpha_mode": "none",
+        "maxval": 255,
+        "projection": "unknown",
+        "projection_canvas_width": 0,
+        "projection_canvas_height": 0,
+        "projection_crop_left": 0,
+        "projection_crop_top": 0,
         "storage_mode": "encoded_paths"
       },
       "partial": {
@@ -166,12 +192,20 @@
         "width": 3,
         "channels": 1,
         "frame_dtype": "uint8",
+        "color_space": "gray",
+        "alpha_mode": "none",
+        "maxval": 255,
+        "projection": "unknown",
+        "projection_canvas_width": 0,
+        "projection_canvas_height": 0,
+        "projection_crop_left": 0,
+        "projection_crop_top": 0,
         "storage_mode": "encoded_paths"
       }
     },
     "manifested": {
       "inspection": {
-        "byte_size": 249,
+        "byte_size": 501,
         "shape": [
           3,
           2,
@@ -186,11 +220,26 @@
           "storage_mode": "encoded_paths",
           "has_timing": true,
           "manifest": true,
+          "manifest_version": 2,
           "frame_names": [
             "c.pgm",
             "a.pgm",
             "b.pgm"
-          ]
+          ],
+          "frame_formats": [
+            "netpbm",
+            "netpbm",
+            "netpbm"
+          ],
+          "color_space": "gray",
+          "alpha_mode": "none",
+          "maxval": 255,
+          "projection": "unknown",
+          "projection_canvas_width": 0,
+          "projection_canvas_height": 0,
+          "projection_crop_left": 0,
+          "projection_crop_top": 0,
+          "is_full_sphere": false
         }
       },
       "full": {
@@ -213,6 +262,14 @@
         "width": 3,
         "channels": 1,
         "frame_dtype": "uint8",
+        "color_space": "gray",
+        "alpha_mode": "none",
+        "maxval": 255,
+        "projection": "unknown",
+        "projection_canvas_width": 0,
+        "projection_canvas_height": 0,
+        "projection_crop_left": 0,
+        "projection_crop_top": 0,
         "storage_mode": "encoded_paths"
       },
       "partial": {
@@ -232,6 +289,14 @@
         "width": 3,
         "channels": 1,
         "frame_dtype": "uint8",
+        "color_space": "gray",
+        "alpha_mode": "none",
+        "maxval": 255,
+        "projection": "unknown",
+        "projection_canvas_width": 0,
+        "projection_canvas_height": 0,
+        "projection_crop_left": 0,
+        "projection_crop_top": 0,
         "storage_mode": "encoded_paths"
       }
     }
